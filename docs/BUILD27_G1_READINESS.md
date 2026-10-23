@@ -29,11 +29,11 @@ The complete `G1` test remains `NOT RUN / NOT ACCEPTED` until the manually trigg
 6. Disposable logical PostgreSQL backup restore succeeds.
 
 ## 282-task status unchanged until real acceptance
-The authoritative cumulative per-task list remains [Build 26 tracker](BUILD26_282_TASKS.csv):
+The authoritative cumulative per-task list is [Build 27 tracker](BUILD27_282_TASKS.csv), preserving prior Build 26 columns:
 - Component CI verified, production acceptance pending: **4**
 - Source implemented, runtime unverified: **67**
-- Partially implemented: **121**
-- Blocked on execution/operator verification: **34**
+- Partially implemented: **122**
+- Blocked on execution/operator verification: **33**
 - Blocked on accounts/external approval: **17**
 - Not started/no audited implementation: **39**
 - **Total: 282**; production acceptance signed: **0/282**.
@@ -44,3 +44,6 @@ Build 27 advances G1 preparation, not production task sign-off. No paid AWS, mer
 Open GitHub Actions -> **Full developer-stack acceptance (manual)** -> Run workflow on latest `main`, **only on a disposable GitHub-hosted runner** and after confirming Actions minutes/costs. If it fails, inspect step logs/artifacts and fix the first genuine integration defect. Do **not** run this against a shared local database or use `docker compose down -v` outside its unique CI project.
 
 Latest release decision: **NO-GO for AWS staging/pilot/production** until G1–G5 are satisfied.
+
+## Actual real PostgreSQL result (GitHub CI)
+[Run 40010523079](https://github.com/kawakaze430/ReelNest/actions/runs/40010523079) passed. The Java 21 Maven JAR built and started against disposable PostgreSQL 17; Flyway installed V1–V25 in sequence, no failures. The three strict migration-history unit tests passed. This is **real clean database startup evidence**, not Keycloak integration or upgrade migration acceptance. **Task A-11 becomes PARTIAL**, not production-accepted. The full creator-to-streaming G1 workflow still needs a manually triggered run.
