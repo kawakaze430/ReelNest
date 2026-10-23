@@ -63,6 +63,22 @@ jobs:
           python3 scripts/check_build08.py
           python3 scripts/test_cdn_signer_java.py
           bash scripts/check_payment_policy_java.sh
+  worker-image:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build actual non-root media-worker container
+        run: docker build --pull -t reelnest-worker-ci -f apps/video-worker/Dockerfile apps/video-worker
+      - name: Verify Python import graph and FFmpeg inside image
+        run: |
+          docker run --rm --network none --read-only --tmpfs /tmp:rw,noexec,nosuid,size=128m \
+            --cap-drop ALL --security-opt no-new-privileges \
+            reelnest-worker-ci python -c "import os,worker,pipeline,caption_packaging,timed_text,audio_packaging,preview_artwork; assert os.geteuid()!=0"
+          docker run --rm --network none --read-only --cap-drop ALL \
+            --security-opt no-new-privileges \
+            reelnest-worker-ci ffmpeg -hide_banner -version
+
   terraform:
     runs-on: ubuntu-latest
     steps:
