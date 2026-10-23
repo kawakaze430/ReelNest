@@ -27,8 +27,16 @@ required = [
 ]
 for path in required:
     assert (root / path).is_file(), f'Missing {path}'
+# Generated dependency trees can contain tool-specific JSON fixtures; validate
+# only project-owned configuration/data files, not installed third-party packages.
+GENERATED_DIRS = {'node_modules', '.next', '.git', '.venv', '__pycache__', 'build-evidence'}
 for path in root.rglob('*.json'):
-    json.loads(path.read_text())
+    if any(part in GENERATED_DIRS for part in path.relative_to(root).parts):
+        continue
+    try:
+        json.loads(path.read_text())
+    except (ValueError, UnicodeError) as error:
+        raise AssertionError(f'Invalid project-owned JSON file: {path.relative_to(root)}: {error}') from error
 from xml.etree import ElementTree
 ElementTree.parse(root / 'apps/api/pom.xml')
 realm = json.loads((root/'infrastructure/keycloak/reelnest-realm.json').read_text())

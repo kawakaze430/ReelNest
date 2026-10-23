@@ -35,14 +35,18 @@ public class CatalogBatchController {
     private String snapshot(List<CatalogImportPreview.Row> rows){
        StringBuilder raw=new StringBuilder();
        for(var row:rows){
-           List<String> versions=db.query("""
+           List<List<String>> versions=db.query("""
              SELECT name,genre,language,age_rating,status FROM titles
              WHERE id=? FOR SHARE
-             """,(r,i)->java.util.List.of(r.getString(1),r.getString(2),r.getString(3),r.getString(4),r.getString(5)),row.id());
+             """,(r,i)->Arrays.asList(r.getString(1),r.getString(2),r.getString(3),r.getString(4),r.getString(5)),row.id());
            if(versions.size()!=1 || !"DRAFT".equals(versions.get(0).get(4)))
                throw new ResponseStatusException(HttpStatus.CONFLICT,"All imported titles must remain DRAFT");
            raw.append(row.id()).append('|');
-           for(String cell:versions.get(0))raw.append(cell.length()).append(':').append(cell).append('|');
+           for(String cell:versions.get(0)){
+               if(cell==null)throw new ResponseStatusException(HttpStatus.CONFLICT,
+                   "Draft metadata contains null values; correct it before staging");
+               raw.append(cell.length()).append(':').append(cell).append('|');
+           }
        }
        return CatalogBatchPolicy.digest(raw.toString());
     }

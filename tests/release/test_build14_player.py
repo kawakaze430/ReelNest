@@ -66,8 +66,12 @@ def test_protected_player_has_safe_and_accessible_controls():
         'aria-label="Rewind ten seconds"', 'aria-label="Forward ten seconds"',
         'dataSaver', 'autoLevelCapping', 'chooseAudio', 'chooseSubtitle',
         'captionContrast', 'onKeyDown', 'toggleFullscreen', 'togglePiP',
-        'onLeavePictureInPicture', 'setRetry(v=>v+1)', 'hlsRef.current?.destroy()',
-        'setPipAvailable(Boolean(document.pictureInPictureEnabled))',
+        "video?.addEventListener('enterpictureinpicture',onEnterPiP)",
+        "video?.addEventListener('leavepictureinpicture',onLeavePiP)",
+        "video?.removeEventListener('enterpictureinpicture',onEnterPiP)",
+        "video?.removeEventListener('leavepictureinpicture',onLeavePiP)",
+        'setRetry(v=>v+1)', 'hlsRef.current?.destroy()',
+        'document.pictureInPictureEnabled',
     ]:
         assert expression in src, f'Missing player contract {expression}'
     assert "xhr.setRequestHeader('Authorization',`Bearer ${token}`)" in src

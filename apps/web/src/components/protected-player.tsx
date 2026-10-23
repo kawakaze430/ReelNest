@@ -136,8 +136,10 @@ export function ProtectedPlayer({titleId}:{titleId:string}) {
   },[prefs.qoeConsent]);
 
   useEffect(() => {
-    const video=videoRef.current;
-    if (!video || !token || !profile.profileId || !auth.isAuthenticated) return;
+    const currentVideo=videoRef.current;
+    if (!currentVideo || !token || !profile.profileId || !auth.isAuthenticated) return;
+    // The stable non-null alias is safe in asynchronous HLS callbacks after teardown guards.
+    const video: HTMLVideoElement = currentVideo;
     let dead=false;
     let tick: ReturnType<typeof setInterval>|undefined;
     let heart: ReturnType<typeof setInterval>|undefined;
@@ -534,10 +536,21 @@ export function ProtectedPlayer({titleId}:{titleId:string}) {
   const activeCue=skipAction(session?.cues,position,session?.durationSeconds??0);
   useEffect(()=>{
     const onFull=()=>setFullscreen(Boolean(document.fullscreenElement));
+    // React's video element props do not type PiP events. Attach native listeners.
+    const video=videoRef.current;
+    const onEnterPiP=()=>setPip(true);
+    const onLeavePiP=()=>setPip(false);
     document.addEventListener('fullscreenchange',onFull);
-    setPipAvailable(Boolean(document.pictureInPictureEnabled));
-    return ()=>document.removeEventListener('fullscreenchange',onFull);
-  },[]);
+    video?.addEventListener('enterpictureinpicture',onEnterPiP);
+    video?.addEventListener('leavepictureinpicture',onLeavePiP);
+    setPipAvailable(Boolean(video && document.pictureInPictureEnabled && !video.disablePictureInPicture));
+    setPip(Boolean(video && document.pictureInPictureElement===video));
+    return ()=>{
+      document.removeEventListener('fullscreenchange',onFull);
+      video?.removeEventListener('enterpictureinpicture',onEnterPiP);
+      video?.removeEventListener('leavepictureinpicture',onLeavePiP);
+    };
+  },[auth.isAuthenticated,profile.profileId]);
 
   if (auth.isLoading || profile.loading) return <main className="wrap viewer-shell"><p>Loading viewer identity...</p></main>;
   if (!auth.isAuthenticated) return <main className="wrap viewer-shell"><h1>Sign in to watch</h1><p>Video playback requires an authenticated viewer account.</p><button className="btn btn-primary" onClick={()=>void auth.signinRedirect()}>Sign in</button></main>;
@@ -548,7 +561,6 @@ export function ProtectedPlayer({titleId}:{titleId:string}) {
     <div className="viewer-screen" onKeyDown={e=>{
       // Don't override native keyboard interactions of toolbar buttons/selects.
       if(e.target!==videoRef.current)return;
-      const video=videoRef.current!;
       switch(e.key.toLowerCase()) {
         case 'arrowright':e.preventDefault();seek(10);break;
         case 'arrowleft':e.preventDefault();seek(-10);break;
@@ -565,7 +577,6 @@ export function ProtectedPlayer({titleId}:{titleId:string}) {
         onTouchEnd={handleTouchEnd}
         onPlay={()=>setPlaying(true)} onPause={()=>setPlaying(false)}
         onVolumeChange={e=>{setMuted(e.currentTarget.muted);setVolume(e.currentTarget.volume);}}
-        onEnterPictureInPicture={()=>setPip(true)} onLeavePictureInPicture={()=>setPip(false)}
         onError={()=>setError('The browser could not decode the stream. Retry the playback session or select another supported device.')}
         tabIndex={0} aria-label="Private OTT video player. Space play/pause; arrows seek; M mute; F fullscreen; C captions." />
     </div>
