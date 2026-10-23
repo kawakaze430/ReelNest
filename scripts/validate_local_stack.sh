@@ -15,6 +15,13 @@ mkdir -p build-evidence
 log="build-evidence/local-stack-$(date -u +%Y%m%dT%H%M%SZ).log"
 exec > >(tee "$log") 2>&1
 trap 'echo "FAILED: inspect docker compose logs --tail=120 api video-worker web recommendation-api"' ERR
+if [[ "$MODE" == --full ]]; then
+  # Full E2E uploads only this repository-owned synthetic media fixture.
+  test -s apps/web/public/sample/demo.mp4 || {
+    echo 'BLOCKED: original sample media missing; use scripts/generate_demo_media.sh on an isolated developer system' >&2
+    exit 3
+  }
+fi
 printf 'Checking Docker Compose...\n'
 docker compose config -q
 printf 'Building and starting services...\n'
@@ -27,6 +34,8 @@ for attempt in $(seq 1 90); do
  if [[ "$attempt" -eq 90 ]]; then echo 'ERROR: startup health timeout' >&2;exit 1;fi
  sleep 3
 done
+printf 'Confirming media-worker modules inside the running non-root container...\n'
+docker compose exec -T video-worker python -c 'import worker, pipeline, caption_packaging, timed_text, audio_packaging, preview_artwork'
 printf 'Checking Flyway migrations...\n'
 docker compose exec -T postgres psql -U reelnest -d reelnest -Atqc \
  "SELECT CASE WHEN COUNT(DISTINCT version) FILTER (WHERE success AND version ~ '^([1-9]|1[0-9]|2[0-5])$')=25 AND COUNT(*) FILTER (WHERE NOT success)=0 THEN 'PASS' ELSE 'FAIL' END FROM flyway_schema_history" | grep '^PASS$'

@@ -7,6 +7,10 @@ jobs:
   acceptance:
     runs-on: ubuntu-latest
     timeout-minutes: 50
+    # Every named volume belongs exclusively to this workflow attempt.
+    # No AWS, DNS, production databases or financial transactions involved.
+    env:
+      COMPOSE_PROJECT_NAME: reelnest-ci-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -32,3 +36,10 @@ jobs:
             build-evidence/*.log
             full-stack-containers.log
           if-no-files-found: ignore
+      - name: Remove only this disposable CI Docker project and its volumes
+        if: always()
+        run: |
+          case "$COMPOSE_PROJECT_NAME" in
+            reelnest-ci-*) docker compose down --volumes --remove-orphans ;;
+            *) echo "Refusing unscoped Docker volume cleanup" >&2; exit 1 ;;
+          esac
