@@ -38,10 +38,13 @@ def package_dash(source: Path, folder: Path, *, timeout: int = 600) -> Path:
 
 def validate_dash(folder: Path) -> None:
     manifest=folder/'stream.mpd'
-    if not manifest.is_file() or not 64 < manifest.stat().st_size <= 512_000:
+    if folder.is_symlink() or manifest.is_symlink() or not manifest.is_file() or not 64 < manifest.stat().st_size <= 512_000:
         raise RuntimeError('Missing or oversized DASH manifest')
+    data=manifest.read_bytes()
+    if b"<!DOCTYPE" in data.upper() or b"<!ENTITY" in data.upper():
+        raise RuntimeError('DASH manifest declarations are not supported')
     try:
-        root=ET.fromstring(manifest.read_bytes())
+        root=ET.fromstring(data)
     except ET.ParseError as exc:
         raise RuntimeError('Malformed DASH XML') from exc
     if root.tag.split('}')[-1]!='MPD':
@@ -51,16 +54,23 @@ def validate_dash(folder: Path) -> None:
     segments=list(folder.glob('*.m4s'))
     if not segments or len(segments)>8000:
         raise RuntimeError('Invalid DASH segment count')
-    if any(not re.fullmatch(r'(?:init|chunk)_\d+(?:_\d{5})?\.m4s',p.name) or p.stat().st_size<16
-           or p.is_symlink() for p in segments):
+    if any(not re.fullmatch(r'(?:init|chunk)_\d+(?:_\d{5})?\.m4s',p.name) or not 16 <= p.stat().st_size <= 80_000_000
+           or p.is_symlink() or not p.is_file() for p in segments):
         raise RuntimeError('Unsafe or invalid DASH segments')
+    templates=0
     for element in root.iter():
-        if element.tag.split('}')[-1] in ('BaseURL','Location','UTCTiming'):
-            raise RuntimeError('DASH manifest cannot reference external resource')
+        if element.tag.split('}')[-1] in ('BaseURL','Location','UTCTiming','SegmentList',
+                                            'SegmentBase','SegmentURL','RepresentationIndex',
+                                            'Initialization'):
+            raise RuntimeError('DASH manifest contains unsupported external/segment reference')
+        if element.tag.split('}')[-1]=='SegmentTemplate':
+            templates+=1
         if element.tag.split('}')[-1]=='SegmentTemplate':
             for key in ('initialization','media'):
                 value=element.get(key,'')
                 if not re.fullmatch(r'(?:init|chunk)_\$RepresentationID\$(?:_\$Number%05d\$)?\.m4s',value):
                     raise RuntimeError('Untrusted DASH template')
+    if not 1 <= templates <= 12:
+        raise RuntimeError('Missing or excessive DASH segment templates')
     if not any(p.name.startswith('init_') for p in segments) or not any(p.name.startswith('chunk_') for p in segments):
         raise RuntimeError('Missing initialization or media segments')
