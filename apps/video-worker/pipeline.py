@@ -86,7 +86,7 @@ def _renditions(info: MediaInfo) -> list[tuple[int, int, int, int]]:
 def _validate_playlist(folder: Path) -> list[Path]:
     """Parse the exact VOD subset our encoder emits; reject URI/tag injection."""
     playlist = folder / "index.m3u8"
-    if not playlist.is_file() or playlist.stat().st_size > 256_000:
+    if folder.is_symlink() or playlist.is_symlink() or not playlist.is_file() or playlist.stat().st_size > 256_000:
         raise RuntimeError("Missing or oversized HLS variant playlist")
     lines = [line.strip() for line in playlist.read_text(encoding="utf-8").splitlines() if line.strip()]
     if not lines or lines[0] != "#EXTM3U" or lines[-1] != "#EXT-X-ENDLIST":
@@ -117,7 +117,7 @@ def _validate_playlist(folder: Path) -> list[Path]:
             if not expect_segment or line != f"seg_{len(segments):05d}.ts":
                 raise RuntimeError("Unexpected HLS segment URI or order")
             path = folder / line
-            if not path.is_file() or path.stat().st_size < 100:
+            if path.is_symlink() or not path.is_file() or not 100 <= path.stat().st_size <= 80_000_000:
                 raise RuntimeError("Missing or empty HLS segment")
             segments.append(path)
             expect_segment = False
@@ -128,7 +128,7 @@ def _validate_playlist(folder: Path) -> list[Path]:
 
 def _master_variants(output_dir: Path) -> list[str]:
     master = output_dir / "master.m3u8"
-    if not master.is_file() or master.stat().st_size > 10_000:
+    if output_dir.is_symlink() or master.is_symlink() or not master.is_file() or master.stat().st_size > 10_000:
         raise RuntimeError("Missing or oversized master playlist")
     lines = [line.strip() for line in master.read_text(encoding="utf-8").splitlines() if line.strip()]
     if not lines or lines[0] != "#EXTM3U" or lines.count("#EXTM3U")!=1 or lines.count("#EXT-X-VERSION:3")!=1:
@@ -247,13 +247,15 @@ def validate_package(output_dir: Path, *, decode_samples: bool = True,
     previews = output_dir / "previews"
     if previews.exists():
         vtt = previews / "preview.vtt"
-        if not vtt.is_file() or not vtt.read_text(encoding="utf-8").startswith("WEBVTT\n"):
+        if previews.is_symlink() or vtt.is_symlink() or not vtt.is_file() or not vtt.read_text(encoding="utf-8").startswith("WEBVTT\n"):
             raise RuntimeError("Invalid seek preview index")
         for name in (line.strip() for line in vtt.read_text().splitlines() if line.endswith('.jpg')):
-            if not re.fullmatch(r"thumb_[0-9]{4}\.jpg", name) or not (previews/name).is_file():
+            if not re.fullmatch(r"thumb_[0-9]{4}\.jpg", name) or (previews/name).is_symlink() or not (previews/name).is_file():
                 raise RuntimeError("Invalid seek preview image reference")
         sprite_vtt = previews / "sprites.vtt"
         if sprite_vtt.exists():
+            if sprite_vtt.is_symlink():
+                raise RuntimeError("Unsafe sprite index")
             text = sprite_vtt.read_text(encoding="utf-8")
             if not text.startswith("WEBVTT\n") or len(text) > 40_000:
                 raise RuntimeError("Invalid sprite preview index")
@@ -261,12 +263,12 @@ def validate_package(output_dir: Path, *, decode_samples: bool = True,
                 if "#xywh=" not in line:
                     continue
                 match = re.fullmatch(r"(sprite_[0-9]{2}\.jpg)#xywh=([0-9]+),([0-9]+),320,180", line)
-                if not match or not (previews/match[1]).is_file():
+                if not match or (previews/match[1]).is_symlink() or not (previews/match[1]).is_file():
                     raise RuntimeError("Invalid sprite reference")
                 if int(match[2]) > 2880 or int(match[3]) > 1620:
                     raise RuntimeError("Sprite crop outside atlas")
     poster = output_dir / "artwork" / "poster.jpg"
-    if poster.exists() and not 100 < poster.stat().st_size < 5_000_000:
+    if poster.is_symlink() or (poster.exists() and not 100 < poster.stat().st_size < 5_000_000):
         raise RuntimeError("Invalid poster image")
 
 def encode(source: Path, output_dir: Path, *, max_duration: int = 14_400,
