@@ -1,0 +1,115 @@
+{
+  "build": 20,
+  "total": 282,
+  "status_counts": {
+    "Partially implemented": 102,
+    "Source implemented \u2014 runtime unverified": 60,
+    "Blocked \u2014 external execution / operator verification": 40,
+    "Blocked \u2014 external approval / account": 17,
+    "Not started / no audited implementation evidence": 63
+  },
+  "workstreams": {
+    "Build, repository & local runtime": {
+      "Partially implemented": 4,
+      "Source implemented \u2014 runtime unverified": 4,
+      "Blocked \u2014 external execution / operator verification": 8
+    },
+    "Identity, security & user accounts": {
+      "Blocked \u2014 external execution / operator verification": 6,
+      "Partially implemented": 7,
+      "Blocked \u2014 external approval / account": 1,
+      "Not started / no audited implementation evidence": 1
+    },
+    "Catalog, metadata, rights & moderation": {
+      "Partially implemented": 11,
+      "Source implemented \u2014 runtime unverified": 3,
+      "Blocked \u2014 external approval / account": 1
+    },
+    "Creator upload & media processing": {
+      "Blocked \u2014 external execution / operator verification": 1,
+      "Partially implemented": 9,
+      "Source implemented \u2014 runtime unverified": 6,
+      "Not started / no audited implementation evidence": 2
+    },
+    "Netflix-style player & playback": {
+      "Blocked \u2014 external execution / operator verification": 3,
+      "Partially implemented": 5,
+      "Source implemented \u2014 runtime unverified": 15,
+      "Not started / no audited implementation evidence": 1
+    },
+    "DRM, entitlement & streaming security": {
+      "Blocked \u2014 external execution / operator verification": 2,
+      "Partially implemented": 5,
+      "Source implemented \u2014 runtime unverified": 3,
+      "Not started / no audited implementation evidence": 8,
+      "Blocked \u2014 external approval / account": 1
+    },
+    "Subscriptions & international payments": {
+      "Blocked \u2014 external execution / operator verification": 1,
+      "Blocked \u2014 external approval / account": 2,
+      "Source implemented \u2014 runtime unverified": 3,
+      "Partially implemented": 6,
+      "Not started / no audited implementation evidence": 5
+    },
+    "Search, recommendations & AI": {
+      "Partially implemented": 7,
+      "Not started / no audited implementation evidence": 5,
+      "Source implemented \u2014 runtime unverified": 5
+    },
+    "Analytics & quality of experience": {
+      "Source implemented \u2014 runtime unverified": 4,
+      "Partially implemented": 5,
+      "Not started / no audited implementation evidence": 4
+    },
+    "UI, accessibility & localization": {
+      "Blocked \u2014 external execution / operator verification": 1,
+      "Partially implemented": 5,
+      "Source implemented \u2014 runtime unverified": 6,
+      "Not started / no audited implementation evidence": 2
+    },
+    "Creator Studio & administration": {
+      "Partially implemented": 8,
+      "Not started / no audited implementation evidence": 4,
+      "Source implemented \u2014 runtime unverified": 1
+    },
+    "AWS & worldwide distribution": {
+      "Blocked \u2014 external execution / operator verification": 5,
+      "Partially implemented": 10,
+      "Source implemented \u2014 runtime unverified": 4,
+      "Blocked \u2014 external approval / account": 2,
+      "Not started / no audited implementation evidence": 4
+    },
+    "Mobile, TV & offline viewing": {
+      "Partially implemented": 1,
+      "Not started / no audited implementation evidence": 12,
+      "Blocked \u2014 external approval / account": 1,
+      "Blocked \u2014 external execution / operator verification": 1
+    },
+    "Privacy, legal & compliance": {
+      "Blocked \u2014 external approval / account": 8,
+      "Partially implemented": 6,
+      "Source implemented \u2014 runtime unverified": 1
+    },
+    "Security & engineering quality": {
+      "Partially implemented": 8,
+      "Blocked \u2014 external execution / operator verification": 5,
+      "Source implemented \u2014 runtime unverified": 4,
+      "Blocked \u2014 external approval / account": 1
+    },
+    "Reliability, performance & recovery": {
+      "Blocked \u2014 external execution / operator verification": 7,
+      "Not started / no audited implementation evidence": 2,
+      "Partially implemented": 5,
+      "Source implemented \u2014 runtime unverified": 1
+    },
+    "Advanced innovation & monetization": {
+      "Not started / no audited implementation evidence": 13
+    }
+  },
+  "all_acceptance_verified": 0,
+  "notes": [
+    "Source present does not imply complete compilation, Docker or production validation.",
+    "Prepared-but-not-executed items have moved to blocked verification lane; previous source evidence preserved.",
+    "Formal externally required approvals remain blocked."
+  ]
+}

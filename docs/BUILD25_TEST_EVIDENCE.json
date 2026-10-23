@@ -1,0 +1,73 @@
+{
+  "build": 25,
+  "date": "2026-10-23",
+  "release": "NO-GO",
+  "total_tasks": 282,
+  "actual_executed": [
+    {
+      "command": "python -m pytest tests/handoff/test_cloud_evidence.py tests/release/test_ai_handoff.py tests/release/test_build24_profile_pin.py -q --disable-warnings",
+      "result": "PASS",
+      "details": "15 passed; earlier new-test fixture error corrected and rerun"
+    },
+    {
+      "command": "PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest apps/recommendation-api/tests apps/recommendation-lab/tests apps/video-worker/tests/test_timed_text.py apps/video-worker/tests/test_caption_packaging.py -q --disable-warnings",
+      "result": "PASS",
+      "details": "37 passed"
+    },
+    {
+      "command": "bash -n scripts/validate_local_stack.sh",
+      "result": "PASS",
+      "details": "Syntax only; not real Docker or PostgreSQL"
+    },
+    {
+      "command": "python -m py_compile scripts/cloud_evidence.py",
+      "result": "PASS",
+      "details": "Python bytecode check only"
+    },
+    {
+      "command": "python scripts/check_env_contracts.py",
+      "result": "PASS",
+      "details": "Static only"
+    },
+    {
+      "command": "python scripts/check_static.py",
+      "result": "PASS",
+      "details": "Static only"
+    },
+    {
+      "command": "node scripts/check_ts_syntax.mjs",
+      "result": "PASS",
+      "details": "83 TS/TSX syntactically parsed; no semantic typecheck"
+    }
+  ],
+  "not_executed": [
+    {
+      "command": "mvn -B -ntp verify",
+      "reason": "Maven executable/dependencies unavailable"
+    },
+    {
+      "command": "npm ci && npm run typecheck && npm run build",
+      "reason": "npm lockfile absent; no dependency registry access in current environment"
+    },
+    {
+      "command": "docker compose config -q && bash scripts/validate_local_stack.sh --full",
+      "reason": "Docker unavailable; no real Flyway migration or media E2E"
+    },
+    {
+      "command": "terraform -chdir=infrastructure/aws init -backend=false -input=false && terraform -chdir=infrastructure/aws validate",
+      "reason": "Terraform provider binary unavailable"
+    },
+    {
+      "command": "Razorpay TEST, AWS staging, user rights approvals",
+      "reason": "External service accounts/approval and execution scope; no live money spent"
+    }
+  ],
+  "migration_sql": "Build25 requires all unique successful versions V1 to V25 and zero failed Flyway versions. Static source only.",
+  "status_counts": {
+    "Source implemented — runtime unverified": 67,
+    "Partially implemented": 119,
+    "Blocked — external execution / operator verification": 40,
+    "Blocked — external approval / account": 17,
+    "Not started / no audited implementation evidence": 39
+  }
+}

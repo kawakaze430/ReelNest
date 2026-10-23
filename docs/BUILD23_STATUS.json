@@ -1,0 +1,27 @@
+{
+  "build": 23,
+  "total_tasks": 282,
+  "counts": {
+    "Partially implemented": 119,
+    "Source implemented \u2014 runtime unverified": 67,
+    "Blocked \u2014 external execution / operator verification": 40,
+    "Blocked \u2014 external approval / account": 17,
+    "Not started / no audited implementation evidence": 39
+  },
+  "full_acceptance_verified": 0,
+  "blocked_external_or_local": 57,
+  "task_ids_addressed": [
+    "C-06",
+    "D-09",
+    "J-07",
+    "J-08",
+    "J-10",
+    "K-04",
+    "M-01",
+    "Q-04",
+    "Q-05",
+    "C-04",
+    "J-06",
+    "F-16"
+  ]
+}

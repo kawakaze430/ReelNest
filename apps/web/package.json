@@ -1,0 +1,29 @@
+{
+  "name": "reelnest-web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -H 0.0.0.0",
+    "build": "next build",
+    "start": "next start -H 0.0.0.0",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "next": "^16.4.1",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-oidc-context": "^3.3.0",
+    "oidc-client-ts": "^3.3.0",
+    "lucide-react": "^0.468.0",
+    "hls.js": "^1.6.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "eslint": "^9.0.0",
+    "eslint-config-next": "^16.4.1",
+    "typescript": "^5.8.0"
+  }
+}

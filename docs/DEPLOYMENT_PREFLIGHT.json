@@ -1,0 +1,34 @@
+{
+  "release_decision": "NO-GO",
+  "explanation": "Cannot certify deployment from local files or source-only checks.",
+  "local_binaries": {
+    "docker": false,
+    "java": true,
+    "mvn": false,
+    "node": true,
+    "npm": true,
+    "terraform": false,
+    "aws": false
+  },
+  "files": {
+    "local_compose": true,
+    "backend_pom": true,
+    "frontend_package": true,
+    "frontend_lockfile": false,
+    "aws_terraform": true,
+    "terraform_reviewed_vars": false,
+    "deploy_guide": true,
+    "amplify_preview_archive": true
+  },
+  "external_gates_unverified": [
+    "GitHub CI Maven verify, npm typecheck/build, Terraform provider validate",
+    "Docker integration and original-film creator-to-viewer E2E",
+    "Razorpay merchant TEST captures, renewal, reversals and webhooks",
+    "AWS staging Terraform plan/apply and HTTPS OIDC/Keycloak",
+    "Real private S3 and signed CloudFront HLS access with rights geofencing",
+    "Security testing, identity MFA, privacy deletion, backup restoration",
+    "Licensed media and Indian OTT/consumer/privacy/legal clearance"
+  ],
+  "static_preview_manual_deploy_ready": true,
+  "full_ott_production_ready": false
+}

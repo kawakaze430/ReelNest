@@ -1,0 +1,41 @@
+{
+  "build": 22,
+  "date": "2026-10-22",
+  "total": 282,
+  "acceptance_verified": 0,
+  "previous_counts": {
+    "Partially implemented": 103,
+    "Source implemented \u2014 runtime unverified": 65,
+    "Blocked \u2014 external execution / operator verification": 40,
+    "Blocked \u2014 external approval / account": 17,
+    "Not started / no audited implementation evidence": 57
+  },
+  "counts": {
+    "Partially implemented": 116,
+    "Source implemented \u2014 runtime unverified": 66,
+    "Blocked \u2014 external execution / operator verification": 40,
+    "Blocked \u2014 external approval / account": 17,
+    "Not started / no audited implementation evidence": 43
+  },
+  "task_status_moves": 14,
+  "tasks_new_source": [
+    "I-06"
+  ],
+  "tasks_new_partial": [
+    "F-11",
+    "G-11",
+    "H-09",
+    "H-13",
+    "H-14",
+    "H-16",
+    "I-11",
+    "I-12",
+    "I-13",
+    "J-14",
+    "K-08",
+    "M-11",
+    "Q-08"
+  ],
+  "operator_approval_blockers": 57,
+  "notes": "Counts represent source evidence. Full Maven/Next.js/Docker integration and external provider checks have not run."
+}

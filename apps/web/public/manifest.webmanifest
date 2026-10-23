@@ -1,0 +1,11 @@
+{
+ "name":"ReelNest — Independent Streaming",
+ "short_name":"ReelNest",
+ "description":"Browse and watch authorized independent video streaming content",
+ "start_url":"/browse",
+ "scope":"/",
+ "display":"standalone",
+ "background_color":"#0b0c12",
+ "theme_color":"#0b0c12",
+ "icons":[{"src":"/reelnest-icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
+}

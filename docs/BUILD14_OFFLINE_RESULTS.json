@@ -1,0 +1,149 @@
+{
+  "project": "ReelNest",
+  "build": "12",
+  "scope": "offline",
+  "generated_at": "2026-10-21T23:28:50.826229+00:00",
+  "offline_checks": {
+    "Historical foundation checks": {
+      "status": "PASS",
+      "command": "python3 scripts/check_static.py",
+      "detail": "PASS: Build 02 files, JSON, SQL checks, XML, catalog parity and YAML checks\n"
+    },
+    "Creator authorization checks": {
+      "status": "PASS",
+      "command": "python3 scripts/check_build02_security.py",
+      "detail": "PASS: admin role guard, rights/creator ownership gates, private multipart flow and UI restrictions present\n"
+    },
+    "Processing architecture checks": {
+      "status": "PASS",
+      "command": "python3 scripts/check_build03.py",
+      "detail": "PASS: Build 03 migration, upload atomicity, worker, CORS, Docker source checks\n"
+    },
+    "Playback architecture checks": {
+      "status": "PASS",
+      "command": "python3 scripts/check_build04.py",
+      "detail": "PASS: Build 04 migration, sessions, rights/age/territory gates, auth media proxy, watchlists, UI and Compose guards\n"
+    },
+    "Payment and discovery source checks": {
+      "status": "PASS",
+      "command": "python3 scripts/check_build56.py",
+      "detail": "PASS: Build 05-06 migrations, signature and paid gating, price plan validation, discovery and admin auth source gates\n"
+    },
+    "Build 08 source contracts": {
+      "status": "PASS",
+      "command": "python3 scripts/check_build08.py",
+      "detail": "Pure Java reversible entitlement test passed\nPASS: Build 07+08 security, cloud, privacy and payment source contracts\n"
+    },
+    "Media, ML and release unit tests": {
+      "status": "PASS",
+      "command": "python3 -m pytest apps/video-worker/tests apps/recommendation-lab/tests tests/release -q",
+      "detail": ".........................                                                [100%]\n25 passed in 4.49s\n"
+    },
+    "Java billing policies": {
+      "status": "PASS",
+      "command": "bash scripts/check_payment_policy_java.sh",
+      "detail": "PASS: Java payment signature and entitlement policy assertions\n"
+    },
+    "Java CDN cryptography": {
+      "status": "PASS",
+      "command": "python3 scripts/test_cdn_signer_java.py",
+      "detail": "PASS: signed CloudFront policy cryptographically verifies; cookies scoped and guarded\n"
+    },
+    "Java production configuration policy": {
+      "status": "PASS",
+      "command": "bash scripts/test_deployment_policy_java.sh",
+      "detail": "PASS: 8 deployment policy assertions\n"
+    },
+    "Build 10 infrastructure contracts": {
+      "status": "PASS",
+      "command": "python3 scripts/check_build10.py",
+      "detail": "PASS: Build 09-10 offline production guard, CDN, frontend, privacy and Docker contracts\n"
+    },
+    "Terraform lexical guard (not provider validation)": {
+      "status": "PASS",
+      "command": "python3 scripts/check_hcl_structure.py",
+      "detail": "PASS: 6 .tf files lexically balanced, no semicolon separators; provider validation still required\n"
+    },
+    "Build 12 ML API and privacy contracts": {
+      "status": "PASS",
+      "command": "python3 -m pytest apps/recommendation-api/tests tests/release/test_build12_contracts.py -q",
+      "detail": "..........                                                               [100%]\n10 passed in 0.92s\n"
+    },
+    "Java erasure tombstone policy": {
+      "status": "PASS",
+      "command": "bash scripts/test_tombstone_java.sh",
+      "detail": "PASS: SHA-256 erasure tombstone policy\n"
+    }
+  },
+  "external_release_gates": {
+    "maven_verify": {
+      "status": "BLOCKED",
+      "detail": "Full Maven compile, tests, Flyway/JPA boot integration \u2014 missing operator attestation"
+    },
+    "nextjs_build": {
+      "status": "BLOCKED",
+      "detail": "Production Next.js dependency install, typecheck and build \u2014 missing operator attestation"
+    },
+    "docker_e2e": {
+      "status": "BLOCKED",
+      "detail": "Live creator upload, HLS, admin approval, viewer playback \u2014 missing operator attestation"
+    },
+    "razorpay_test": {
+      "status": "BLOCKED",
+      "detail": "Razorpay sandbox charge, refund, dispute, duplicate/out-of-order webhook \u2014 missing operator attestation"
+    },
+    "cdn_geo": {
+      "status": "BLOCKED",
+      "detail": "CloudFront distribution, cookie and country/territory bypass test \u2014 missing operator attestation"
+    },
+    "terraform_validate": {
+      "status": "BLOCKED",
+      "detail": "Real Terraform init/validate/plan with pinned provider and review \u2014 missing operator attestation"
+    },
+    "security_review": {
+      "status": "BLOCKED",
+      "detail": "Dependency scan, access control, session & upload threat-model review \u2014 missing operator attestation"
+    },
+    "content_rights": {
+      "status": "BLOCKED",
+      "detail": "Owned/licensed films, classification, consent and rights documents \u2014 missing operator attestation"
+    },
+    "privacy_deletion": {
+      "status": "BLOCKED",
+      "detail": "Identity-provider+storage+legal retention deletion workflow proven \u2014 missing operator attestation"
+    },
+    "backup_restore": {
+      "status": "BLOCKED",
+      "detail": "Staging RDS restore and recovery target test \u2014 missing operator attestation"
+    },
+    "load_test": {
+      "status": "BLOCKED",
+      "detail": "Representative paid traffic and video QoE load tests \u2014 missing operator attestation"
+    },
+    "alerts_runbook": {
+      "status": "BLOCKED",
+      "detail": "Paging routes and alert exercises with incident ownership \u2014 missing operator attestation"
+    }
+  },
+  "summary": {
+    "offline_passed": 14,
+    "offline_total": 14,
+    "external_attested": 0,
+    "external_total": 12,
+    "unverified_external": [
+      "maven_verify",
+      "nextjs_build",
+      "docker_e2e",
+      "razorpay_test",
+      "cdn_geo",
+      "terraform_validate",
+      "security_review",
+      "content_rights",
+      "privacy_deletion",
+      "backup_restore",
+      "load_test",
+      "alerts_runbook"
+    ]
+  },
+  "release_status": "NOT_PRODUCTION_READY"
+}

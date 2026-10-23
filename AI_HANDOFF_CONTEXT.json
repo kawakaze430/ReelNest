@@ -1,0 +1,255 @@
+{
+  "project": "ReelNest",
+  "baseline_build": 23,
+  "handoff_revision_date": "2026-10-22",
+  "baseline_zip_filename": "reelnest-build-23-cumulative-editorial-channels-parties.zip",
+  "baseline_zip_sha256": "b8b7db115f1c9436ba108eac701ecc63ce9f5cf84399eb01e5de989fded75a27",
+  "source_tree": "reelnest/",
+  "release_decision": "NO-GO",
+  "status_counts": {
+    "Partially implemented": 119,
+    "Source implemented — runtime unverified": 67,
+    "Blocked — external execution / operator verification": 40,
+    "Blocked — external approval / account": 17,
+    "Not started / no audited implementation evidence": 39
+  },
+  "total_tasks": 282,
+  "fully_acceptance_verified_count": 0,
+  "tech_stack": {
+    "web": "Next.js 16 + React 19 + TypeScript",
+    "api": "Java 21 + Spring Boot 3.5.x",
+    "db": "PostgreSQL + Flyway V1-V25",
+    "local": "Keycloak + RabbitMQ + Redis + MinIO + Docker Compose",
+    "video": "FFmpeg + HLS; standalone optional DASH packager",
+    "ml": "Python FastAPI + offline recommendation models",
+    "cloud": "AWS Terraform (not provider-validated or deployed)",
+    "billing": "Razorpay source, no connected sandbox sign-off"
+  },
+  "local_test_evidence": {
+    "build23_contracts": "7 passed in handoff session",
+    "typescript_syntax": "83 files parsed, 0 syntax errors; NOT tsc/build",
+    "python_video_ml": "59 passed in handoff session"
+  },
+  "blocked_gates": [
+    "full maven compile",
+    "full npm/next build",
+    "Docker",
+    "Flyway clean/upgrade",
+    "live Keycloak",
+    "authenticated upload-to-playback",
+    "Razorpay TEST",
+    "Terraform provider and AWS staging",
+    "CloudFront georights",
+    "DRM commercial",
+    "licences/independent audit"
+  ],
+  "canonical_tracker": "docs/BUILD25_282_TASKS.csv",
+  "handoff_index": "AI_START_HERE.md",
+  "files": [
+    "docs/AI_HANDOFF/01_PROJECT_CHARTER.md",
+    "docs/AI_HANDOFF/02_CURRENT_SOURCE_AND_LIMITS.md",
+    "docs/AI_HANDOFF/03_CANONICAL_282_STATUS_AND_BACKLOG.md",
+    "docs/AI_HANDOFF/04_RELEASE_GATES_AND_REAL_TESTS.md",
+    "docs/AI_HANDOFF/05_WORK_ALLOCATION_AND_CONTINUATION.md",
+    "docs/AI_HANDOFF/06_PROMPTS_FOR_OTHER_MODELS.md",
+    "docs/AI_HANDOFF/07_NEXT_WORK_PACKAGES.md",
+    "docs/AI_HANDOFF/09_BUILD24_CONTINUATION.md",
+    "docs/BUILD24_IMPLEMENTATION.md",
+    "docs/BUILD24_282_TASKS.csv",
+    "docs/BUILD24_TEST_EVIDENCE.json",
+    "REELNEST_CODEX_CLOUD_ONE_SHOT_PROMPT.md",
+    "docs/AI_HANDOFF/10_BUILD25_CLOUD_TEST_DELEGATION.md",
+    "docs/BUILD25_IMPLEMENTATION.md",
+    "docs/BUILD25_TEST_EVIDENCE.json",
+    "docs/BUILD25_282_TASKS.csv"
+  ],
+  "workstreams": [
+    {
+      "id": "A",
+      "name": "Build, repository & local runtime",
+      "total": 16,
+      "status_counts": {
+        "Partially implemented": 4,
+        "Source implemented — runtime unverified": 4,
+        "Blocked — external execution / operator verification": 8
+      }
+    },
+    {
+      "id": "B",
+      "name": "Identity, security & user accounts",
+      "total": 15,
+      "status_counts": {
+        "Blocked — external execution / operator verification": 6,
+        "Partially implemented": 8,
+        "Blocked — external approval / account": 1
+      }
+    },
+    {
+      "id": "C",
+      "name": "Catalog, metadata, rights & moderation",
+      "total": 15,
+      "status_counts": {
+        "Partially implemented": 10,
+        "Source implemented — runtime unverified": 4,
+        "Blocked — external approval / account": 1
+      }
+    },
+    {
+      "id": "D",
+      "name": "Creator upload & media processing",
+      "total": 18,
+      "status_counts": {
+        "Blocked — external execution / operator verification": 1,
+        "Partially implemented": 10,
+        "Source implemented — runtime unverified": 6,
+        "Not started / no audited implementation evidence": 1
+      }
+    },
+    {
+      "id": "E",
+      "name": "Netflix-style player & playback",
+      "total": 24,
+      "status_counts": {
+        "Blocked — external execution / operator verification": 3,
+        "Partially implemented": 5,
+        "Source implemented — runtime unverified": 15,
+        "Not started / no audited implementation evidence": 1
+      }
+    },
+    {
+      "id": "F",
+      "name": "DRM, entitlement & streaming security",
+      "total": 19,
+      "status_counts": {
+        "Blocked — external execution / operator verification": 2,
+        "Partially implemented": 7,
+        "Source implemented — runtime unverified": 3,
+        "Not started / no audited implementation evidence": 6,
+        "Blocked — external approval / account": 1
+      }
+    },
+    {
+      "id": "G",
+      "name": "Subscriptions & international payments",
+      "total": 17,
+      "status_counts": {
+        "Blocked — external execution / operator verification": 1,
+        "Blocked — external approval / account": 2,
+        "Source implemented — runtime unverified": 3,
+        "Partially implemented": 7,
+        "Not started / no audited implementation evidence": 4
+      }
+    },
+    {
+      "id": "H",
+      "name": "Search, recommendations & AI",
+      "total": 17,
+      "status_counts": {
+        "Partially implemented": 11,
+        "Source implemented — runtime unverified": 6
+      }
+    },
+    {
+      "id": "I",
+      "name": "Analytics & quality of experience",
+      "total": 13,
+      "status_counts": {
+        "Source implemented — runtime unverified": 5,
+        "Partially implemented": 8
+      }
+    },
+    {
+      "id": "J",
+      "name": "UI, accessibility & localization",
+      "total": 14,
+      "status_counts": {
+        "Blocked — external execution / operator verification": 1,
+        "Partially implemented": 7,
+        "Source implemented — runtime unverified": 6
+      }
+    },
+    {
+      "id": "K",
+      "name": "Creator Studio & administration",
+      "total": 13,
+      "status_counts": {
+        "Partially implemented": 9,
+        "Source implemented — runtime unverified": 4
+      }
+    },
+    {
+      "id": "L",
+      "name": "AWS & worldwide distribution",
+      "total": 25,
+      "status_counts": {
+        "Blocked — external execution / operator verification": 5,
+        "Partially implemented": 10,
+        "Source implemented — runtime unverified": 4,
+        "Blocked — external approval / account": 2,
+        "Not started / no audited implementation evidence": 4
+      }
+    },
+    {
+      "id": "M",
+      "name": "Mobile, TV & offline viewing",
+      "total": 15,
+      "status_counts": {
+        "Source implemented — runtime unverified": 1,
+        "Not started / no audited implementation evidence": 11,
+        "Partially implemented": 1,
+        "Blocked — external approval / account": 1,
+        "Blocked — external execution / operator verification": 1
+      }
+    },
+    {
+      "id": "N",
+      "name": "Privacy, legal & compliance",
+      "total": 15,
+      "status_counts": {
+        "Blocked — external approval / account": 8,
+        "Partially implemented": 6,
+        "Source implemented — runtime unverified": 1
+      }
+    },
+    {
+      "id": "O",
+      "name": "Security & engineering quality",
+      "total": 18,
+      "status_counts": {
+        "Partially implemented": 8,
+        "Blocked — external execution / operator verification": 5,
+        "Source implemented — runtime unverified": 4,
+        "Blocked — external approval / account": 1
+      }
+    },
+    {
+      "id": "P",
+      "name": "Reliability, performance & recovery",
+      "total": 15,
+      "status_counts": {
+        "Blocked — external execution / operator verification": 7,
+        "Not started / no audited implementation evidence": 2,
+        "Partially implemented": 5,
+        "Source implemented — runtime unverified": 1
+      }
+    },
+    {
+      "id": "Q",
+      "name": "Advanced innovation & monetization",
+      "total": 13,
+      "status_counts": {
+        "Not started / no audited implementation evidence": 10,
+        "Partially implemented": 3
+      }
+    }
+  ],
+  "latest_source_build": 25,
+  "latest_source_report": "docs/BUILD25_IMPLEMENTATION.md",
+  "latest_evidence": "docs/BUILD25_TEST_EVIDENCE.json",
+  "latest_offline_verification": {
+    "build25_handoff_regression": "15 passed",
+    "selected_recommendation_caption_tests": "37 passed",
+    "frontend_syntax": "83 parsed; not a typecheck",
+    "g0_g1_cloud_real_tests": "NOT RUN — delegated to Codex Cloud when available"
+  }
+}

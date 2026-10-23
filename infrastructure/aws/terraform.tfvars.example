@@ -1,0 +1,18 @@
+# DO NOT run terraform apply without checking billing and data residency requirements.
+root_domain = "example.com"
+zone_id = "Z_REPLACE"
+alb_certificate_arn = "arn:aws:acm:ap-south-1:ACCOUNT:certificate/REPLACE"
+cdn_certificate_arn = "arn:aws:acm:us-east-1:ACCOUNT:certificate/REPLACE"
+cdn_public_key_pem = "-----BEGIN PUBLIC KEY-----\nREPLACE\n-----END PUBLIC KEY-----"
+api_image = "ACCOUNT.dkr.ecr.ap-south-1.amazonaws.com/reelnest-staging-api@sha256:REPLACE"
+web_image = "ACCOUNT.dkr.ecr.ap-south-1.amazonaws.com/reelnest-staging-web@sha256:REPLACE"
+worker_image = "ACCOUNT.dkr.ecr.ap-south-1.amazonaws.com/reelnest-staging-worker@sha256:REPLACE"
+identity_issuer_url = "https://identity.example.com/realms/reelnest"
+identity_jwks_uri = "https://identity.example.com/realms/reelnest/protocol/openid-connect/certs"
+# Keep false while missing sandbox verification, territory enforcement and billing safety review.
+enable_services = false
+
+# Single-territory launch: API rights and CloudFront edge geofence must agree.
+playback_country = "IN"
+# Do not enable until edge restriction and spoof/bypass tests are independently verified.
+reviewed_geo_enforcement = false

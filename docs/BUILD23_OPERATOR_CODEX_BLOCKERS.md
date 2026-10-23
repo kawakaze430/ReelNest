@@ -1,0 +1,61 @@
+# Operator/Codex/External queue — Build 23
+
+57 tasks remain blocked by live execution, provider access, or approvals. No automatic completion is assumed.
+
+- **A-04** — Regenerate and commit reviewed npm lockfile
+- **A-05** — Compile backend with real Maven dependencies
+- **A-06** — Run backend unit and integration tests
+- **A-07** — Typecheck and production-build Next.js
+- **A-08** — Build Docker images for API, frontend, worker and AI service
+- **A-09** — Validate Compose schema, profiles and dependencies
+- **A-10** — Start PostgreSQL, Keycloak, Redis, RabbitMQ, MinIO, API, frontend and ML services
+- **A-11** — Apply Flyway V1–V9 on clean database and test an upgrade database
+- **B-01** — Verify registration, login, email confirmation and account recovery
+- **B-03** — Remove seeded/demo accounts from staging and production
+- **B-04** — Configure production identity persistence, SMTP and secure TLS
+- **B-05** — Enable MFA for administrators and sensitive accounts
+- **B-07** — Enforce per-resource ownership and IDOR protection
+- **B-14** — Test Keycloak outage, restart and identity recovery procedures
+- **B-15** — Review admin break-glass procedure and audit records
+- **C-15** — Review content rights and classification with qualified professionals
+- **D-01** — Verify end-to-end direct multipart upload to private MinIO/S3
+- **E-01** — Test initial playback in Chrome, Edge, Firefox and Safari
+- **E-02** — Test Android Chrome and iOS Safari native HLS behavior
+- **E-24** — Verify stream session limits across browsers/devices
+- **F-01** — Verify every playback API checks profile ownership
+- **F-06** — Prove direct S3 and unauthorized CDN requests return denial
+- **F-19** — Define DRM compliance and security commitments with licensors
+- **G-01** — Compile and run billing service against local database
+- **G-02** — Verify Razorpay TEST plan creation and checkout
+- **G-15** — Calculate appropriate local taxes, VAT/GST and refund rules with advisor
+- **J-01** — Verify every existing route and error state in the real app
+- **L-01** — Verify local Docker integration before AWS deployment
+- **L-02** — Validate Terraform fmt/init/validate with real providers
+- **L-03** — Review Terraform plan, resource costs and IAM policies
+- **L-11** — Deploy frontend, API, ML service and worker to staging
+- **L-14** — Configure signed-cookies distribution and verified georestrictions
+- **L-15** — Deploy CloudFront global distribution and verify real regional clients
+- **L-25** — Perform canary pilot in one licensed territory before worldwide rollout
+- **M-14** — Set up app signing, store listings, review and staged rollouts
+- **M-15** — Create a device/browser/DRM capability matrix and test lab
+- **N-01** — Review privacy policy, terms of use and applicable data laws
+- **N-07** — Perform child data/age verification risk review
+- **N-08** — Review OTT content classifications, grievance redressal and takedown
+- **N-09** — Validate rights contracts for every country and streaming platform
+- **N-10** — Review international taxes, trade/sanctions and payment availability
+- **N-11** — Review accessibility commitments in target countries
+- **N-13** — Run independent IP/trademark clearance for brand name and artwork
+- **N-14** — Define creator payout and intellectual-property dispute process
+- **O-03** — Test BOLA/IDOR against user/creator/admin account boundaries
+- **O-09** — Run DAST and external dependency/vulnerability review
+- **O-12** — Test CDN signed-cookie expiry, geo bypass and authorization revocation
+- **O-13** — Add pentest and independent security review before paid launch
+- **O-15** — Add Playwright happy-path and negative browser E2E flows
+- **O-16** — Add visual, keyboard, browser matrix and accessibility regressions
+- **P-01** — Run backup/restore in disposable PostgreSQL environment
+- **P-04** — Run read-only and controlled-write load tests in staging
+- **P-05** — Test playback startup time and rebuffer ratios across networks
+- **P-06** — Load test simultaneous sessions and subscription gate
+- **P-08** — Test disk/storage, DB, broker and upstream outage behavior
+- **P-11** — Test blue-green/canary deploy and safe rollback
+- **P-14** — Perform chaos/failure injection in staging (not production)

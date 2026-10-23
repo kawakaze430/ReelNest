@@ -1,0 +1,97 @@
+server:
+  port: ${SERVER_PORT:8080}
+spring:
+  application:
+    name: reelnest-api
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/reelnest}
+    username: ${DB_USER:reelnest}
+    password: ${DB_PASSWORD:local_dev_only}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  flyway:
+    enabled: true
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${JWT_ISSUER_URI:http://localhost:8180/realms/reelnest}
+          jwk-set-uri: ${JWT_JWKS_URI:http://localhost:8180/realms/reelnest/protocol/openid-connect/certs}
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      ssl:
+        enabled: ${REDIS_SSL_ENABLED:false}
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USER:reelnest}
+    password: ${RABBITMQ_PASSWORD:local_dev_only}
+management:
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: never
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+app:
+  auth:
+    required-audience: ${JWT_REQUIRED_AUDIENCE:reelnest-api}
+    required-client: ${JWT_REQUIRED_CLIENT:reelnest-web}
+  deploy:
+    mode: ${APP_DEPLOY_MODE:development}
+  cors-origin: ${CORS_ORIGIN:http://localhost:3000}
+
+  storage:
+    endpoint: ${S3_ENDPOINT:}
+    public-endpoint: ${S3_PUBLIC_ENDPOINT:}
+    access-key: ${S3_ACCESS_KEY:}
+    secret-key: ${S3_SECRET_KEY:}
+    region: ${S3_REGION:us-east-1}
+    bucket: ${S3_SOURCE_BUCKET:reelnest-source-private}
+    max-upload-bytes: ${MAX_UPLOAD_BYTES:5368709120}
+  playback:
+    # IN is a server-side development territory. Never accept a client-supplied country.
+    # Production must use verified trusted-edge geolocation, geofencing and CDN signing.
+    trusted-country: ${PLAYBACK_TRUSTED_COUNTRY:IN}
+    dev-proxy-enabled: ${PLAYBACK_DEV_PROXY_ENABLED:false}
+    processed-bucket: ${S3_PROCESSED_BUCKET:reelnest-processed-private}
+    # Staging review flag, not a geo mechanism. Requires independently verified country source.
+    cdn-geo-reviewed: ${PLAYBACK_CDN_GEO_REVIEWED:false}
+    cdn-base-url: ${PLAYBACK_CDN_BASE_URL:}
+    cdn-cookie-domain: ${PLAYBACK_CDN_COOKIE_DOMAIN:}
+    cdn-key-pair-id: ${CLOUDFRONT_KEY_PAIR_ID:}
+    cdn-private-key-pem: ${CLOUDFRONT_PRIVATE_KEY_PEM:}
+
+  billing:
+    reconciliation:
+      enabled: ${BILLING_RECONCILIATION_ENABLED:false}
+      delay-ms: ${BILLING_RECONCILIATION_DELAY_MS:1800000}
+    razorpay:
+      # Leave blank to fail closed. Use Razorpay TEST keys for local development.
+      key-id: ${RAZORPAY_KEY_ID:}
+      key-secret: ${RAZORPAY_KEY_SECRET:}
+      webhook-secret: ${RAZORPAY_WEBHOOK_SECRET:}
+      standard-plan-id: ${RAZORPAY_STANDARD_PLAN_ID:}
+      premium-plan-id: ${RAZORPAY_PREMIUM_PLAN_ID:}
+
+  recommendation:
+    enabled: ${RECOMMENDATION_ENABLED:false}
+    url: ${RECOMMENDATION_INTERNAL_URL:http://recommendation-api:8000}
+    internal-token: ${RECOMMENDATION_INTERNAL_TOKEN:}
+
+  privacy:
+    keycloak-admin-url: ${PRIVACY_KEYCLOAK_ADMIN_URL:}
+    keycloak-realm: ${PRIVACY_KEYCLOAK_REALM:reelnest}
+    client-id: ${PRIVACY_KEYCLOAK_CLIENT_ID:}
+    client-secret: ${PRIVACY_KEYCLOAK_CLIENT_SECRET:}

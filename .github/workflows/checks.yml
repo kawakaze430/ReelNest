@@ -1,0 +1,111 @@
+name: Build checks
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  api:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+          cache-dependency-path: apps/api/pom.xml
+      - name: Backend tests and compilation
+        working-directory: apps/api
+        run: mvn --batch-mode --no-transfer-progress verify
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Install frontend dependencies
+        working-directory: apps/web
+        run: |
+          if [ -f package-lock.json ]; then npm ci --no-audit --no-fund; else npm install --no-audit --no-fund; fi
+      - name: Identity and environment source checks
+        run: |
+          python3 scripts/check_env_contracts.py
+          bash scripts/test_token_claims_java.sh
+          python3 -m pip install pytest
+          python3 -m pytest tests/release/test_build19_contracts.py -q
+      - name: TypeScript and production build
+        working-directory: apps/web
+        run: |
+          node ../../scripts/check_ts_syntax.mjs
+          npm audit --omit=dev --audit-level=high
+          npm run typecheck
+          npm run build
+  worker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21' 
+      - name: Install Python dependencies
+        run: python3 -m pip install pytest pyyaml boto3 'psycopg[binary]' scikit-learn fastapi httpx uvicorn
+      - name: Install FFmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - name: Media and ML tests
+        run: python3 -m pytest apps/video-worker/tests apps/recommendation-lab/tests apps/recommendation-api/tests tests/release/test_build12_contracts.py -q
+      - name: Historical regressions and build 08 checks
+        run: |
+          python3 scripts/check_static.py
+          python3 scripts/check_build02_security.py
+          python3 scripts/check_build03.py
+          python3 scripts/check_build04.py
+          python3 scripts/check_build56.py
+          python3 scripts/check_build08.py
+          python3 scripts/test_cdn_signer_java.py
+          bash scripts/check_payment_policy_java.sh
+  terraform:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with: {terraform_version: '1.9.8'}
+      - name: Validate AWS infrastructure syntax and provider schema
+        working-directory: infrastructure/aws
+        run: |
+          terraform init -backend=false -input=false
+          terraform validate
+  release-offline:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: {distribution: temurin, java-version: '21'}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Install Python test dependencies
+        run: python3 -m pip install pytest pyyaml scikit-learn fastapi httpx uvicorn
+      - name: Install FFmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - name: Install player-test TypeScript compiler
+        run: npm install --global typescript@5.8.3
+      - name: Run all offline release gates
+        run: python3 scripts/release_gate.py --mode offline --output docs/BUILD16_CI_RESULTS.json
+      - name: Upload evidence report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with: {name: reelnest-build16-offline-results, path: docs/BUILD16_CI_RESULTS.json}
+
+  aws-preview-package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create safe Amplify static deployment artifact
+        run: |
+          python3 scripts/prepare_public_preview.py
+          python3 -m pip install pytest
+          python3 -m pytest tests/deployment -q
+      - name: Upload preview for authorized manual AWS deployment
+        uses: actions/upload-artifact@v4
+        with:
+          name: reelnest-amplify-preview
+          path: deploy/reelnest-amplify-preview.zip

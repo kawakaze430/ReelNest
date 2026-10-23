@@ -1,0 +1,22 @@
+{
+  "build": 23,
+  "previous_zip": "reelnest-build-22-discovery-analytics-cumulative.zip",
+  "previous_source_entries": 434,
+  "new_source_entries": 463,
+  "preserved_previous_files": 434,
+  "new_files": 29,
+  "removed_previous_files": [],
+  "test_results": {
+    "release_pytest_passed": 61,
+    "video_worker_unittest_passed": 30,
+    "recommendation_unittest_passed": 8,
+    "typescript_files_parsed": 83,
+    "standalone_java_policy_passed": true,
+    "full_offline_runner_reported": "24/24 pass; process exit timed out; not certified as clean exit",
+    "maven_compilation": "not_run",
+    "nextjs_production_build": "not_run",
+    "postgres_migration": "not_run",
+    "docker_integration": "not_run"
+  },
+  "production_acceptance_verified": 0
+}

@@ -1,0 +1,49 @@
+# Dependencies and builds
+**/node_modules/
+**/.next/
+**/target/
+**/dist/
+**/build/
+**/.gradle/
+# Environment secrets
+.env
+.env.local
+.env.*.local
+**/.env.local
+# IDE and OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+*.iml
+# Logs and caches
+*.log
+__pycache__/
+.pytest_cache/
+*.tsbuildinfo
+# Cloud infrastructure state, private configuration and cryptographic keys
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+*.tfplan
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Operator evidence/attestations can contain sensitive vendor references
+docs/release-attestation.local.json
+docs/*-production-report.local.json
+
+# Agent and local integration results: may contain identifiers, service logs or request samples
+build-evidence/
+**/build-evidence/
+docs/live-smoke.local.json
+*.local.json
+*.local.yml
+*.local.yaml
+*.bak
+*.backup
+*.dump
+*.sql.gz

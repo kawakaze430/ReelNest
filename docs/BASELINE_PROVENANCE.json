@@ -1,0 +1,8 @@
+{
+  "source_archive": "reelnest-all-builds-01-to-18-reconciled(1).zip",
+  "source_archive_sha256": "9e3b96cefd5f1498361030cae4b6a1d384d19e122d2e4e1e39be77fa657ad1f5",
+  "baseline_git_commit": "f65f718a8bf560ff754a68785159b85078fa78d7",
+  "baseline_git_branch": "build18-upload",
+  "delivery": "Build 19 cumulative Zip; Git bundle in docs/history/",
+  "notes": "Baseline derived from user-supplied Build 18 reconciled zip. No remote Git repository or protected branch exists until user creates one."
+}

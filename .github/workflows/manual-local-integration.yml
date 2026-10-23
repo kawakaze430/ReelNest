@@ -1,0 +1,34 @@
+name: Full developer-stack acceptance (manual)
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  acceptance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install Playwright testing dependencies
+        run: |
+          python -m pip install playwright httpx pytest
+          python -m playwright install --with-deps chromium
+      - name: Start local stack and run full creator-to-playback workflow
+        run: bash scripts/validate_local_stack.sh --full
+      - name: Restore logical backup to disposable database
+        run: bash scripts/test_restore_disposable.sh
+      - name: Collect diagnostic logs on failure
+        if: failure()
+        run: docker compose logs --tail=200 --no-color > full-stack-containers.log || true
+      - name: Upload available evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reelnest-build12-live-integration-evidence
+          path: |
+            build-evidence/*.log
+            full-stack-containers.log
+          if-no-files-found: ignore

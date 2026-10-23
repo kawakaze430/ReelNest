@@ -1,0 +1,99 @@
+{
+  "realm": "reelnest",
+  "enabled": true,
+  "registrationAllowed": true,
+  "resetPasswordAllowed": true,
+  "loginWithEmailAllowed": true,
+  "verifyEmail": false,
+  "roles": {
+    "realm": [
+      {
+        "name": "VIEWER",
+        "description": "Platform viewer"
+      },
+      {
+        "name": "CREATOR",
+        "description": "Verified content creator (future feature)"
+      },
+      {
+        "name": "MODERATOR",
+        "description": "Scoped content moderation role (not admin)"
+      },
+      {
+        "name": "ADMIN",
+        "description": "Platform administrator (future feature)"
+      }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "reelnest-web",
+      "name": "ReelNest local web client",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "implicitFlowEnabled": false,
+      "redirectUris": [
+        "http://localhost:3000/auth/callback"
+      ],
+      "webOrigins": [
+        "http://localhost:3000"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "http://localhost:3000"
+      },
+      "protocolMappers": [
+        {
+          "name": "reelnest-api-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.custom.audience": "reelnest-api",
+            "id.token.claim": "false",
+            "access.token.claim": "true",
+            "introspection.token.claim": "true"
+          }
+        }
+      ]
+    }
+  ],
+  "users": [
+    {
+      "username": "demo",
+      "email": "demo@reelnest.example",
+      "emailVerified": true,
+      "enabled": true,
+      "realmRoles": [
+        "VIEWER"
+      ],
+      "credentials": [
+        {
+          "type": "password",
+          "value": "DemoOnly123!",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "reviewer",
+      "email": "reviewer@reelnest.example",
+      "emailVerified": true,
+      "enabled": true,
+      "realmRoles": [
+        "VIEWER",
+        "ADMIN"
+      ],
+      "credentials": [
+        {
+          "type": "password",
+          "value": "LocalReviewer123!",
+          "temporary": false
+        }
+      ]
+    }
+  ]
+}

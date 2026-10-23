@@ -1,0 +1,83 @@
+{
+  "build": 24,
+  "date": "2026-10-23",
+  "acceptance": "NO-GO",
+  "total_tasks": 282,
+  "counts_unchanged_from_build23": {
+    "Partially implemented": 119,
+    "Source implemented — runtime unverified": 67,
+    "Blocked — external execution / operator verification": 40,
+    "Blocked — external approval / account": 17,
+    "Not started / no audited implementation evidence": 39
+  },
+  "source_progress_not_accepted": [
+    "A-13",
+    "B-10"
+  ],
+  "executed": [
+    {
+      "command": "python -m pytest tests/release/test_build24_profile_pin.py tests/release/test_build23_contracts.py tests/release/test_ai_handoff.py -q --disable-warnings",
+      "result": "PASS",
+      "details": "17 passed (Build24 portable tests: 5; Build23 contracts: 7; handoff: 5). Includes actual javac/java verification of PIN cryptographic policy."
+    },
+    {
+      "command": "python -m pytest apps/recommendation-api/tests apps/recommendation-lab/tests apps/video-worker/tests/test_timed_text.py apps/video-worker/tests/test_caption_packaging.py -q --disable-warnings",
+      "result": "PASS",
+      "details": "37 passed; selected tests only, not complete FFmpeg/media suites."
+    },
+    {
+      "command": "python scripts/check_env_contracts.py",
+      "result": "PASS",
+      "details": "Static environment/security contracts only."
+    },
+    {
+      "command": "python scripts/check_static.py",
+      "result": "PASS",
+      "details": "Build 02 static source checks."
+    },
+    {
+      "command": "node scripts/check_ts_syntax.mjs",
+      "result": "PASS",
+      "details": "83 TypeScript/TSX files parsed; not typecheck or build."
+    },
+    {
+      "command": "python scripts/codex_preflight.py",
+      "result": "PASS_WITH_BLOCKERS",
+      "details": "Python, Java 21, Node 22, npm, git, ffmpeg detected; Maven, Docker, Terraform, Codex and npm lockfile absent."
+    }
+  ],
+  "incomplete_run": [
+    {
+      "command": "python -m pytest apps/video-worker/tests apps/recommendation-lab/tests apps/recommendation-api/tests tests/release/test_build23_contracts.py tests/release/test_build12_contracts.py -q --disable-warnings --maxfail=2",
+      "result": "TIMEOUT",
+      "details": "Combined test run exceeded execution timeout after initial dots; no claim of suite pass."
+    }
+  ],
+  "not_executed": [
+    {
+      "command": "cd apps/api && mvn -B verify",
+      "reason": "Maven executable and pre-fetched Spring dependencies unavailable; newly added JUnit tests are not run."
+    },
+    {
+      "command": "cd apps/web && npm ci && npm run typecheck && npm run build",
+      "reason": "No package-lock.json or node_modules; package registry DNS access failed."
+    },
+    {
+      "command": "docker compose up --build -d && bash scripts/validate_local_stack.sh --smoke",
+      "reason": "Docker unavailable; PostgreSQL and real Flyway migrations not executed."
+    },
+    {
+      "command": "cd infrastructure/aws && terraform init -backend=false && terraform validate",
+      "reason": "Terraform executable and providers unavailable."
+    },
+    {
+      "command": "Real Keycloak, media E2E, Razorpay TEST, CloudFront signed distribution, AWS staging and territory-licence review",
+      "reason": "External execution environment/accounts/approvals not provided; no real payments or AWS resources used."
+    }
+  ],
+  "scope_notes": [
+    "Added JUnit/Mockito tests but did not compile or execute them.",
+    "No task promoted to fully verified on the basis of portable offline tests.",
+    "No original existing application files removed."
+  ]
+}

@@ -1,0 +1,168 @@
+{
+  "build": 19,
+  "task_count": 282,
+  "counts": {
+    "Locally implemented": 57,
+    "Partially implemented": 97,
+    "Prepared, not executed": 43,
+    "Externally blocked": 17,
+    "Not started / no evidence found": 68
+  },
+  "workstreams": {
+    "A": {
+      "title": "Build, repository & local runtime",
+      "total": 16,
+      "Locally implemented": 4,
+      "Partially implemented": 4,
+      "Prepared, not executed": 8,
+      "Externally blocked": 0,
+      "Not started / no evidence found": 0
+    },
+    "B": {
+      "title": "Identity, security & user accounts",
+      "total": 15,
+      "Locally implemented": 0,
+      "Partially implemented": 7,
+      "Prepared, not executed": 6,
+      "Externally blocked": 1,
+      "Not started / no evidence found": 1
+    },
+    "C": {
+      "title": "Catalog, metadata, rights & moderation",
+      "total": 15,
+      "Locally implemented": 3,
+      "Partially implemented": 9,
+      "Prepared, not executed": 0,
+      "Externally blocked": 1,
+      "Not started / no evidence found": 2
+    },
+    "D": {
+      "title": "Creator upload & media processing",
+      "total": 18,
+      "Locally implemented": 6,
+      "Partially implemented": 9,
+      "Prepared, not executed": 1,
+      "Externally blocked": 0,
+      "Not started / no evidence found": 2
+    },
+    "E": {
+      "title": "Netflix-style player & playback",
+      "total": 24,
+      "Locally implemented": 15,
+      "Partially implemented": 5,
+      "Prepared, not executed": 3,
+      "Externally blocked": 0,
+      "Not started / no evidence found": 1
+    },
+    "F": {
+      "title": "DRM, entitlement & streaming security",
+      "total": 19,
+      "Locally implemented": 3,
+      "Partially implemented": 5,
+      "Prepared, not executed": 2,
+      "Externally blocked": 1,
+      "Not started / no evidence found": 8
+    },
+    "G": {
+      "title": "Subscriptions & international payments",
+      "total": 17,
+      "Locally implemented": 3,
+      "Partially implemented": 6,
+      "Prepared, not executed": 1,
+      "Externally blocked": 2,
+      "Not started / no evidence found": 5
+    },
+    "H": {
+      "title": "Search, recommendations & AI",
+      "total": 17,
+      "Locally implemented": 5,
+      "Partially implemented": 7,
+      "Prepared, not executed": 0,
+      "Externally blocked": 0,
+      "Not started / no evidence found": 5
+    },
+    "I": {
+      "title": "Analytics & quality of experience",
+      "total": 13,
+      "Locally implemented": 4,
+      "Partially implemented": 5,
+      "Prepared, not executed": 0,
+      "Externally blocked": 0,
+      "Not started / no evidence found": 4
+    },
+    "J": {
+      "title": "UI, accessibility & localization",
+      "total": 14,
+      "Locally implemented": 5,
+      "Partially implemented": 6,
+      "Prepared, not executed": 1,
+      "Externally blocked": 0,
+      "Not started / no evidence found": 2
+    },
+    "K": {
+      "title": "Creator Studio & administration",
+      "total": 13,
+      "Locally implemented": 0,
+      "Partially implemented": 6,
+      "Prepared, not executed": 0,
+      "Externally blocked": 0,
+      "Not started / no evidence found": 7
+    },
+    "L": {
+      "title": "AWS & worldwide distribution",
+      "total": 25,
+      "Locally implemented": 4,
+      "Partially implemented": 9,
+      "Prepared, not executed": 6,
+      "Externally blocked": 2,
+      "Not started / no evidence found": 4
+    },
+    "M": {
+      "title": "Mobile, TV & offline viewing",
+      "total": 15,
+      "Locally implemented": 0,
+      "Partially implemented": 1,
+      "Prepared, not executed": 1,
+      "Externally blocked": 1,
+      "Not started / no evidence found": 12
+    },
+    "N": {
+      "title": "Privacy, legal & compliance",
+      "total": 15,
+      "Locally implemented": 0,
+      "Partially implemented": 6,
+      "Prepared, not executed": 1,
+      "Externally blocked": 8,
+      "Not started / no evidence found": 0
+    },
+    "O": {
+      "title": "Security & engineering quality",
+      "total": 18,
+      "Locally implemented": 4,
+      "Partially implemented": 7,
+      "Prepared, not executed": 6,
+      "Externally blocked": 1,
+      "Not started / no evidence found": 0
+    },
+    "P": {
+      "title": "Reliability, performance & recovery",
+      "total": 15,
+      "Locally implemented": 1,
+      "Partially implemented": 5,
+      "Prepared, not executed": 7,
+      "Externally blocked": 0,
+      "Not started / no evidence found": 2
+    },
+    "Q": {
+      "title": "Advanced innovation & monetization",
+      "total": 13,
+      "Locally implemented": 0,
+      "Partially implemented": 0,
+      "Prepared, not executed": 0,
+      "Externally blocked": 0,
+      "Not started / no evidence found": 13
+    }
+  },
+  "acceptance_verified": 0,
+  "basis": "static source and historical delivery reports; no live runtime acceptance"
+}

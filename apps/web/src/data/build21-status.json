@@ -1,0 +1,32 @@
+{
+  "build": 21,
+  "total": 282,
+  "statuses": [
+    {
+      "name": "Source implemented (runtime unverified)",
+      "count": 65,
+      "color": "#159575"
+    },
+    {
+      "name": "Partially implemented",
+      "count": 103,
+      "color": "#d7a52c"
+    },
+    {
+      "name": "Blocked \u2014 external execution / operator verification",
+      "count": 40,
+      "color": "#648acd"
+    },
+    {
+      "name": "Blocked \u2014 external approval / account",
+      "count": 17,
+      "color": "#c46b5e"
+    },
+    {
+      "name": "Not started / no audited implementation evidence",
+      "count": 57,
+      "color": "#8a8f98"
+    }
+  ],
+  "acceptanceVerified": 0
+}
