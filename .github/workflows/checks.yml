@@ -86,8 +86,9 @@ jobs:
         run: python3 -m pip install pytest pyyaml scikit-learn fastapi httpx uvicorn
       - name: Install FFmpeg
         run: sudo apt-get update && sudo apt-get install -y ffmpeg
-      - name: Install player-test TypeScript compiler
-        run: npm install --global typescript@5.8.3
+      - name: Install locked frontend dependencies for pure TypeScript player tests
+        working-directory: apps/web
+        run: npm ci --no-audit --no-fund
       - name: Run all offline release gates
         run: python3 scripts/release_gate.py --mode offline --output docs/BUILD16_CI_RESULTS.json
       - name: Upload evidence report
