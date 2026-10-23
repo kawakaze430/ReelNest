@@ -6,6 +6,7 @@ and validate the returned candidate IDs again.
 """
 from __future__ import annotations
 import hmac
+import math
 import os
 from fastapi import FastAPI, Header, HTTPException
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -43,6 +44,25 @@ class RankedItem(BaseModel):
 class RankResponse(BaseModel):
     ranked: list[RankedItem]
 
+def authorized_results(items, allowed: set[str], limit: int, excluded=()):
+    """Fail closed if a model returns an unknown, duplicate or non-finite result.
+
+    Inputs have already passed through the Java API's rights-filtered candidate
+    list. This second barrier does not replace server-side entitlement checks.
+    """
+    seen = set(excluded)
+    ranked = []
+    for item_id, score in items:
+        if item_id not in allowed or item_id in seen:
+            continue
+        if isinstance(score, bool) or not isinstance(score, (int, float)) or not math.isfinite(score):
+            continue
+        seen.add(item_id)
+        ranked.append(RankedItem(id=item_id, score=float(score)))
+        if len(ranked) >= limit:
+            break
+    return RankResponse(ranked=ranked)
+
 @app.get('/health')
 def health():
     return {'status':'ok'}
@@ -62,7 +82,7 @@ def rank(payload: RankRequest, x_reelnest_internal_token: str | None = Header(de
         # Per-request, in-memory fit. No identifying profile ID crosses this boundary.
         model = HybridRecommender().fit(films,interactions)
         ranked = model.rank('request',payload.preferredLanguage,payload.limit,ids)
-        return RankResponse(ranked=[RankedItem(id=id,score=score) for id,score in ranked])
+        return authorized_results(ranked, ids, payload.limit, payload.seenIds)
     except (ValueError, IndexError) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
@@ -90,4 +110,4 @@ def semantic(payload: SearchRequest, x_reelnest_internal_token: str | None = Hea
     allowed={c.id for c in payload.candidates}
     found=semantic_search(payload.query,[SearchFilm(c.id,c.title,c.synopsis,c.genre,c.language)
                                        for c in payload.candidates],payload.limit)
-    return RankResponse(ranked=[RankedItem(id=id,score=score) for id,score in found if id in allowed])
+    return authorized_results(found, allowed, payload.limit)
