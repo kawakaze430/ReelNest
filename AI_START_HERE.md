@@ -1,3 +1,5 @@
+> **LATEST SOURCE — BUILD 26 (2026-10-23):** Work from GitHub `main`. Read [Build 26 engineering report](docs/BUILD26_DELIVERY_REPORT.md) and `docs/BUILD26_282_TASKS.csv` before continuing. Exactly 20 original backlog items received evidence or engineering progress, with 4 component-CI-verified, 67 source-implemented/runtime-unverified, 121 partial, 34 execution-blocked, 17 external-approval-blocked and 39 not started. The older Build 25 headings below are historical. **No completed G1–G5 acceptance; no AWS/paid launch authorization.**
+
 > **BUILD 25:** Latest cumulative checkpoint. New: scoped Codex Cloud G0/G1/TF evidence runner and Flyway V1–V25 guard. `docs/BUILD25_282_TASKS.csv` is authoritative; no production acceptance. Read `docs/BUILD25_IMPLEMENTATION.md` and the one-shot prompt at the repository root.
 
 # CURRENT — ReelNest Build 24 cumulative source (2026-10-23)
