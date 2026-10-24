@@ -14,7 +14,7 @@ public final class UploadPartSnapshot {
 
     public static List<PartInfo> validate(ListPartsResponse response,long expectedBytes,int expectedPartCount) {
         if (response==null || expectedBytes<1 || expectedBytes>UploadValidation.MAX_BYTES
-            || expectedPartCount!=UploadValidation.partCount(expectedBytes) || response.isTruncated())
+            || expectedPartCount!=UploadValidation.partCount(expectedBytes) || Boolean.TRUE.equals(response.isTruncated()))
             throw new ResponseStatusException(HttpStatus.CONFLICT,"Incomplete storage part listing");
         List<PartInfo> verified=new ArrayList<>();
         int previous=0;

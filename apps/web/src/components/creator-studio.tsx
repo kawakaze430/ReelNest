@@ -179,7 +179,7 @@ export function CreatorStudio() {
       window.localStorage.setItem(key,signature);
       try {
         const remote=await apiFetch<UploadedPart[]>(`${base}/${intent.id}/parts`,token);
-        const existing=new Map(skipExisting?remote.map(p=>[p.partNumber,p.eTag]):[]);
+        const existing=new Map<number,string>(skipExisting?remote.map(p=>[p.partNumber,p.eTag] as const):[]);
         const parts:{partNumber:number;eTag:string}[]=[];
         setPercent(Math.round(existing.size/intent.partCount*100));
         for(let n=1;n<=intent.partCount;n++){
@@ -214,7 +214,7 @@ export function CreatorStudio() {
       }catch(error){
         // Crucial: do not abort and destroy parts on a transient network failure.
         await refreshSelected(titleId).catch(()=>{});
-        throw new Error(`${error instanceof Error?error.message:'Upload interrupted'}. Progress is saved in private storage for 24 hours. Re-select the same original video and click Resume upload.`);
+        throw new Error(`${error instanceof Error?error.message:'Upload interrupted'}. Received parts remain in private storage until the upload expires (up to 24 hours). Re-select the same original video and click Resume upload.`);
       }
     });
   }
