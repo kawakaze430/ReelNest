@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Verify real disposable PostgreSQL Flyway V1–V25; NOT complete G1 acceptance."""
+"""Verify real disposable PostgreSQL Flyway V1–V26; NOT complete G1 acceptance."""
 from __future__ import annotations
 import os
 from pathlib import Path
@@ -11,8 +11,8 @@ MIGRATIONS = ROOT / "apps/api/src/main/resources/db/migration"
 
 def expected_versions():
     versions = sorted(int(p.name.split("__", 1)[0][1:]) for p in MIGRATIONS.glob("V*__*.sql"))
-    if versions != list(range(1, 26)):
-        raise AssertionError(f"Expected contiguous migration files V1–V25, got {versions}")
+    if versions != list(range(1, 27)):
+        raise AssertionError(f"Expected contiguous migration files V1–V26, got {versions}")
     return versions
 
 

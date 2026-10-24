@@ -11,6 +11,7 @@ import {
 import type Hls from 'hls.js';
 import { apiFetch, API_BASE_URL, ApiError } from '@/lib/api';
 import { ProfilePicker } from '@/components/profile-picker';
+import { SceneExplorer } from '@/components/scene-explorer';
 import { useActiveProfile } from '@/hooks/use-active-profile';
 import { prettyTime, playbackMessage, type PlaybackSession } from '@/lib/playback';
 import { boundedElapsedMs, hlsRecoveryAction, skipAction, telemetryErrorCode } from '@/lib/playback-enhancements';
@@ -636,6 +637,11 @@ export function ProtectedPlayer({titleId}:{titleId:string}) {
       <label className="viewer-consent"><input type="checkbox" checked={prefs.qoeConsent} onChange={e=>changePrefs({qoeConsent:e.target.checked})}/>
         Share optional playback quality metrics linked to this viewer profile (off by default)</label>
     </div>
+    {session&&token&&profile.profileId&&<SceneExplorer
+      token={token} titleId={titleId} profileId={profile.profileId}
+      duration={session.durationSeconds} canSeek={ready}
+      onSeek={seconds=>{const v=videoRef.current;if(v&&ready&&Number.isFinite(v.duration))
+        v.currentTime=Math.max(0,Math.min(seconds,Math.max(0,v.duration-1)));}}/>}
     {networkRecovery&&<p className="viewer-support-note" role="status" aria-live="polite">{networkRecovery}</p>}
     {nativeHls&&<p className="viewer-support-note">Safari native HLS manages adaptive quality internally. Manual quality control is unavailable here. Audio language selection uses native track controls only when Safari exposes them; captions are available when the stream provides them. Data saver does not cap native playback.</p>}
     {(!audioTracks.length || !subtitleTracks.length)&&<p className="viewer-support-note">Audio and subtitle choices appear only when the licensed HLS package includes alternate tracks. Preferences are stored on this device and synchronized to your signed-in profile when the API is available.</p>}

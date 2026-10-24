@@ -41,7 +41,7 @@ def test_full_stack_acceptance_requires_original_asset_and_runtime_worker_import
     assert "docker compose up --build -d" in script
     assert "test -s apps/web/public/sample/demo.mp4" in script
     assert "docker compose exec -T video-worker python -c" in script
-    assert "COUNT(DISTINCT version)" in script and "=25" in script
+    assert "COUNT(DISTINCT version)" in script and "=26" in script
     assert "python3 scripts/e2e_processing_live.py" in script
     assert "python3 scripts/e2e_playback_live.py" in script
 
