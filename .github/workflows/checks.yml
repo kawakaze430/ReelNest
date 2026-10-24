@@ -181,7 +181,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - uses: hashicorp/setup-terraform@v3
+      - uses: hashicorp/setup-terraform@v4
         with: {terraform_version: '1.9.8'}
       - name: Validate AWS infrastructure syntax and provider schema
         working-directory: infrastructure/aws
