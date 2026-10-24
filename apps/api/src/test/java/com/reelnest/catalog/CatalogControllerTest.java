@@ -16,7 +16,7 @@ class CatalogControllerTest {
     private final CatalogController controller=new CatalogController(repository,"IN");
 
     @Test void invalidPagesAndCountriesRejected() {
-        assertThrows(ResponseStatusException.class,()->controller.list(null,null,null,0,100));
+        assertThrows(ResponseStatusException.class,()->controller.list(null,null,null,null,0,100));
         assertThrows(IllegalArgumentException.class,()->new CatalogController(repository,"IND"));
         verifyNoInteractions(repository);
     }
