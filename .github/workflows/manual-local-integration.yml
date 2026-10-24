@@ -35,7 +35,7 @@ jobs:
           java-version: '21'
           cache: maven
           cache-dependency-path: apps/api/pom.xml
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         if: inputs.g0_components == ''
         with:
           node-version: '22'
