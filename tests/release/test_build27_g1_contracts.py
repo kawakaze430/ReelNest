@@ -30,7 +30,8 @@ def test_worker_image_copies_transitive_python_imports():
     dockerfile = (WORKER / "Dockerfile").read_text()
     needed = _local_modules("worker.py")
     assert len(needed) >= 5, f"Unexpectedly small worker graph: {needed}"
-    assert "COPY *.py ./" in dockerfile
+    import re
+    assert re.search(r"^COPY\s+(?:--\S+\s+)*\*\.py\s+\./$", dockerfile, re.MULTILINE)
     assert 'RUN python -c "import worker' in dockerfile
     assert "*.py" not in (WORKER / ".dockerignore").read_text().splitlines()
     assert "timed_text.py" in needed and "caption_packaging.py" in needed
@@ -41,7 +42,7 @@ def test_full_stack_acceptance_requires_original_asset_and_runtime_worker_import
     assert "docker compose up --build -d" in script
     assert "test -s apps/web/public/sample/demo.mp4" in script
     assert "docker compose exec -T video-worker python -c" in script
-    assert "COUNT(DISTINCT version)" in script and "=25" in script
+    assert "validate_history" in script and "ORDER BY installed_rank" in script
     assert "python3 scripts/e2e_processing_live.py" in script
     assert "python3 scripts/e2e_playback_live.py" in script
 

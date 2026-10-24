@@ -9,11 +9,16 @@ import type {Title} from '@/types/catalog';
 
 type Recommendation={title:Title;score:number;reason:string};
 export function RecommendationFeed(){
-  const viewer=useActiveProfile();const [data,setData]=useState<Recommendation[]>([]);
-  const [error,setError]=useState('');const [loading,setLoading]=useState(false);
+  const viewer=useActiveProfile();
+  return <RecommendationView key={`${viewer.auth.user?.profile.sub ?? 'anonymous'}:${viewer.profileId}`} viewer={viewer}/>;
+}
+
+function RecommendationView({viewer}:{viewer:ReturnType<typeof useActiveProfile>}){
+  const [data,setData]=useState<Recommendation[]>([]);
+  const [error,setError]=useState('');const [loading,setLoading]=useState(Boolean(viewer.token&&viewer.profileId));
   useEffect(()=>{
-    if(!viewer.token||!viewer.profileId){setData([]);return;}
-    let active=true;setLoading(true);setError('');
+    if(!viewer.token||!viewer.profileId)return;
+    let active=true;
     apiFetch<Recommendation[]>(`/api/v1/discovery/home?profileId=${viewer.profileId}&limit=18`,viewer.token)
       .then(results=>{if(active)setData(results);})
       .catch(()=>{if(active)setError('Recommendations could not be loaded.');})

@@ -64,6 +64,8 @@
   "users": [
     {
       "username": "demo",
+      "firstName": "Integration",
+      "lastName": "Viewer",
       "email": "demo@reelnest.example",
       "emailVerified": true,
       "enabled": true,
@@ -80,6 +82,8 @@
     },
     {
       "username": "reviewer",
+      "firstName": "Integration",
+      "lastName": "Reviewer",
       "email": "reviewer@reelnest.example",
       "emailVerified": true,
       "enabled": true,

@@ -11,6 +11,7 @@ from pathlib import Path
 import sys
 import urllib.error
 import urllib.request
+from urllib.parse import urlsplit
 import uuid
 
 CHECKS=[
@@ -31,9 +32,13 @@ def main():
     ap.add_argument('--allow-remote',action='store_true',help='Explicitly allow tests against a remote HTTPS API')
     args=ap.parse_args()
     base=args.api.rstrip('/')
-    if not args.allow_remote and not (base.startswith('http://localhost:') or base.startswith('http://127.0.0.1:')):
+    target=urlsplit(base)
+    if target.username or target.password or target.path not in ('','/') or target.query or target.fragment:
+        ap.error('API target must be an origin without credentials, path, query or fragment')
+    local=target.hostname in ('localhost','127.0.0.1','::1') and target.scheme=='http'
+    if not args.allow_remote and not local:
         ap.error('Only local API targets are allowed by default; use --allow-remote for an explicitly approved target')
-    if args.allow_remote and not base.startswith('https://'):
+    if args.allow_remote and (target.scheme!='https' or not target.hostname):
         ap.error('Remote smoke tests require HTTPS')
     results={}
     for name,path,allowed in CHECKS:

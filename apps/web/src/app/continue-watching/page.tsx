@@ -9,12 +9,16 @@ import {prettyTime,type ContinueItem} from '@/lib/playback';
 
 export default function ContinueWatchingPage(){
   const p=useActiveProfile();
+  return <ContinueWatchingView key={`${p.auth.user?.profile.sub ?? 'anonymous'}:${p.profileId}`} p={p}/>;
+}
+
+function ContinueWatchingView({p}:{p:ReturnType<typeof useActiveProfile>}){
   const [items,setItems]=useState<ContinueItem[]>([]);
-  const [loading,setLoading]=useState(true);
+  const [loading,setLoading]=useState(Boolean(p.token&&p.profileId));
   const [error,setError]=useState('');
   useEffect(()=>{
-    if(!p.token||!p.profileId){setItems([]);setLoading(false);return;}
-    let dead=false;setLoading(true);setError('');
+    if(!p.token||!p.profileId)return;
+    let dead=false;
     apiFetch<ContinueItem[]>(`/api/v1/playback/continue-watching?profileId=${p.profileId}`,p.token)
       .then(rows=>{if(!dead)setItems(rows);})
       .catch(()=>{if(!dead)setError('Could not retrieve playback history.');})

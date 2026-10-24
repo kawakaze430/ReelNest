@@ -16,13 +16,25 @@ const CATEGORIES: {value:Category;label:string}[]=[
 ];
 
 export function SupportCaseCenter(){
- const auth=useAuth();const token=auth.user?.access_token;
+ const auth=useAuth();
+ return <AccountSupportCases key={auth.isAuthenticated ? auth.user?.profile.sub : 'anonymous'} auth={auth}/>;
+}
+function AccountSupportCases({auth}:{auth:ReturnType<typeof useAuth>}){
+ const token=auth.user?.access_token;
  const [items,setItems]=useState<CaseRecord[]>([]);const [category,setCategory]=useState<Category>('TECHNICAL');
  const [subject,setSubject]=useState('');const [description,setDescription]=useState('');const [titleId,setTitleId]=useState('');
- const [message,setMessage]=useState('');const [busy,setBusy]=useState(false);const [loading,setLoading]=useState(false);
+ const [message,setMessage]=useState('');const [busy,setBusy]=useState(false);const [loading,setLoading]=useState(Boolean(token));
  const [appealId,setAppealId]=useState('');const [appealReason,setAppealReason]=useState('');
  async function refresh(){if(!token)return;setLoading(true);try {setItems(await apiFetch<CaseRecord[]>('/api/v1/support/cases',token));}catch(e){setMessage(e instanceof ApiError?e.message:'Could not load cases');}finally{setLoading(false);}}
- useEffect(()=>{if(token)void refresh();else setItems([]);},[token]); // authenticated account owns case list
+ useEffect(()=>{
+  if(!token)return;
+  const controller=new AbortController();
+  apiFetch<CaseRecord[]>('/api/v1/support/cases',token,{signal:controller.signal})
+   .then(rows=>{if(!controller.signal.aborted)setItems(rows);})
+   .catch(e=>{if(!controller.signal.aborted)setMessage(e instanceof ApiError?e.message:'Could not load cases');})
+   .finally(()=>{if(!controller.signal.aborted)setLoading(false);});
+  return()=>controller.abort();
+ },[token]); // Account-keyed component prevents another account's tickets from being rendered.
  async function submit(e:React.FormEvent){e.preventDefault();if(!token)return;
   setBusy(true);setMessage('');try{
    await apiFetch<CaseRecord>('/api/v1/support/cases',token,{method:'POST',body:JSON.stringify({subject,description,category,titleId:category==='RIGHTS_COMPLAINT'?titleId||null:null})});

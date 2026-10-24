@@ -15,13 +15,14 @@ public interface TitleRepository extends JpaRepository<TitleEntity, UUID> {
     Optional<TitleEntity> findByIdAndStatus(UUID id, String status);
     Optional<TitleEntity> findBySlugAndStatus(String slug,String status);
 
+    // PostgreSQL needs text-typed optional parameters even when their value is null.
     @Query("""
       select t from TitleEntity t
       where t.status = 'PUBLISHED'
-      and (:genre is null or lower(t.genre) = lower(:genre))
-      and (:language is null or lower(t.language) = lower(:language))
-      and (:query is null or lower(t.name) like lower(concat('%', :query, '%'))
-           or lower(t.synopsis) like lower(concat('%', :query, '%')))
+      and (cast(:genre as string) is null or lower(t.genre) = lower(cast(:genre as string)))
+      and (cast(:language as string) is null or lower(t.language) = lower(cast(:language as string)))
+      and (cast(:query as string) is null or lower(t.name) like lower(concat('%', cast(:query as string), '%'))
+           or lower(t.synopsis) like lower(concat('%', cast(:query as string), '%')))
       """)
     Page<TitleEntity> search(
         @Param("genre") String genre,

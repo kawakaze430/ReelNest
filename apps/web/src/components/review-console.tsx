@@ -8,14 +8,18 @@ import { MediaCueEditor } from '@/components/media-cue-editor';
 import type { Creator, ReviewTitle, Rights, MediaJob } from '@/types/creator';
 
 export function ReviewConsole() {
-  const auth=useAuth();const token=auth.user?.access_token;
+  const auth=useAuth();
+  return <AccountReviewConsole key={auth.isAuthenticated ? auth.user?.profile.sub : 'anonymous'} auth={auth}/>;
+}
+function AccountReviewConsole({auth}:{auth:ReturnType<typeof useAuth>}) {
+  const token=auth.user?.access_token;
   const [creators,setCreators]=useState<Creator[]>([]);
   const [titles,setTitles]=useState<ReviewTitle[]>([]);
   const [seoTitles,setSeoTitles]=useState<{id:string;name:string;seo_index_approved:boolean}[]>([]);
   const [rights,setRights]=useState<Record<string,Rights>>({});
   const [media,setMedia]=useState<Record<string,MediaJob[]>>({});
   const [note,setNote]=useState<Record<string,string>>({});
-  const [loading,setLoading]=useState(false);
+  const [loading,setLoading]=useState(Boolean(token));
   const [error,setError]=useState('');const [message,setMessage]=useState('');
   const refresh=useCallback(async()=>{
     if(!token)return;
@@ -30,7 +34,21 @@ export function ReviewConsole() {
     } catch(e) {setError(e instanceof Error?e.message:'Admin API inaccessible. Sign in as the local reviewer account.');}
     finally {setLoading(false);}
   },[token]);
-  useEffect(()=>{void refresh();},[refresh]);
+  useEffect(()=>{
+    if(!token)return;
+    const controller=new AbortController();
+    Promise.all([
+      apiFetch<Creator[]>('/api/v1/admin/creators/pending',token,{signal:controller.signal}),
+      apiFetch<ReviewTitle[]>('/api/v1/admin/titles/review',token,{signal:controller.signal}),
+      apiFetch<{id:string;name:string;seo_index_approved:boolean}[]>('/api/v1/admin/titles/seo-review',token,{signal:controller.signal})
+    ]).then(([apps,pending,seo])=>{
+      if(controller.signal.aborted)return;
+      setCreators(apps);setTitles(pending);setSeoTitles(seo);setRights({});setMedia({});
+    }).catch(e=>{
+      if(!controller.signal.aborted)setError(e instanceof Error?e.message:'Admin API inaccessible. Sign in as the local reviewer account.');
+    }).finally(()=>{if(!controller.signal.aborted)setLoading(false);});
+    return()=>controller.abort();
+  },[token]);
 
   async function act(path:string,body:unknown,confirmation:string) {
     if(!token)return;

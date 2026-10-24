@@ -1,41 +1,140 @@
-name: Full developer-stack acceptance (manual)
+name: Full developer-stack acceptance
 on:
   workflow_dispatch:
+  workflow_call:
+    inputs:
+      g0_components:
+        description: Successful exact-commit component results from the calling Build checks workflow
+        type: string
+        required: true
 permissions:
   contents: read
+defaults:
+  run:
+    shell: bash
 jobs:
   acceptance:
     runs-on: ubuntu-latest
-    timeout-minutes: 50
+    timeout-minutes: 60
     # Every named volume belongs exclusively to this workflow attempt.
     # No AWS, DNS, production databases or financial transactions involved.
     env:
       COMPOSE_PROJECT_NAME: reelnest-ci-${{ github.run_id }}-${{ github.run_attempt }}
+      REELNEST_DISPOSABLE_STACK: 'true'
+      AWS_EC2_METADATA_DISABLED: 'true'
+      NEXT_TELEMETRY_DISABLED: '1'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - uses: actions/setup-java@v4
+        if: inputs.g0_components == ''
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+          cache-dependency-path: apps/api/pom.xml
+      - uses: actions/setup-node@v4
+        if: inputs.g0_components == ''
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
       - name: Install Playwright testing dependencies
         run: |
           python -m pip install playwright httpx pytest
           python -m playwright install --with-deps chromium
+      - name: Confirm developer Compose configuration
+        run: docker compose config -q
+      - name: Run G0 when invoked manually
+        if: inputs.g0_components == ''
+        run: python3 scripts/cloud_evidence.py --phase g0
+      - name: Record successful component gate from the calling workflow
+        if: inputs.g0_components != ''
+        env:
+          G0_COMPONENTS: ${{ inputs.g0_components }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          needs = json.loads(os.environ['G0_COMPONENTS'])
+          required = ('api', 'web', 'worker', 'worker-image', 'recommendation-image', 'release-offline')
+          components = {name: needs[name]['result'] for name in required}
+          if any(value != 'success' for value in components.values()):
+              raise SystemExit('G0 component gate did not pass; refusing G1')
+          # The immediately preceding Compose check ran in this same fresh checkout.
+          components['compose-validation'] = 'success'
+          evidence = {
+              'format': 'github-actions-g0',
+              'phase': 'g0',
+              'source_commit': os.environ['GITHUB_SHA'],
+              'workflow_run_id': os.environ['GITHUB_RUN_ID'],
+              'components': components,
+          }
+          directory = Path('build-evidence')
+          directory.mkdir(exist_ok=True)
+          (directory / 'cloud-g0-latest.json').write_text(json.dumps(evidence, indent=2) + '\n')
+          PY
       - name: Start local stack and run full creator-to-playback workflow
-        run: bash scripts/validate_local_stack.sh --full
+        # The evidence runner invokes bash scripts/validate_local_stack.sh --full
+        # only after validating current-source G0 evidence and disposable scope.
+        run: python3 scripts/cloud_evidence.py --phase g1 --disposable-confirmed --g0-evidence build-evidence/cloud-g0-latest.json
       - name: Restore logical backup to disposable database
         run: bash scripts/test_restore_disposable.sh
       - name: Collect diagnostic logs on failure
         if: failure()
-        run: docker compose logs --tail=200 --no-color > full-stack-containers.log || true
-      - name: Upload available evidence
+        run: |
+          mkdir -p build-evidence
+          raw_log=$(mktemp "$RUNNER_TEMP/reelnest-containers.XXXXXXXX.log")
+          trap 'rm -f "$raw_log"' EXIT
+          docker compose logs --tail=200 --no-color > "$raw_log" 2>&1 || true
+          python3 scripts/cloud_evidence.py --sanitize-log "$raw_log" build-evidence/ci-containers.log
+      - name: Publish phase outcomes in the job summary
+        if: always()
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          lines = [f"## ReelNest G1 at `{os.environ['GITHUB_SHA']}`", '',
+                   '| Evidence | Outcome |', '| --- | --- |']
+          for filename in ('cloud-g1-latest.json', 'local-stack-latest.json', 'live-smoke-latest.json', 'browser-identity-latest.json', 'playback-latest.json', 'restore-latest.json'):
+              path = Path('build-evidence') / filename
+              if not path.exists():
+                  outcome = 'NOT RUN / no completed report'
+              else:
+                  report = json.loads(path.read_text())
+                  outcome = str(report.get('statuses', report.get('status', report.get('outcome', 'See artifact'))))
+              lines.append(f'| {filename} | {outcome} |')
+          lines += ['', 'These checks do not verify financial transactions, AWS staging, licensing, or production readiness.']
+          with Path(os.environ['GITHUB_STEP_SUMMARY']).open('a') as summary:
+              summary.write('\n'.join(lines) + '\n')
+          PY
+      - name: Upload sanitized reports and command diagnostics
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: reelnest-build12-live-integration-evidence
+          name: g1-integration-${{ github.sha }}-${{ github.run_attempt }}
           path: |
-            build-evidence/*.log
-            full-stack-containers.log
-          if-no-files-found: ignore
+            build-evidence/cloud-g0-*.json
+            build-evidence/cloud-g0-*.md
+            build-evidence/cloud-g0-*.log
+            build-evidence/cloud-g1-*.json
+            build-evidence/cloud-g1-*.md
+            build-evidence/cloud-g1-*.log
+            build-evidence/local-stack-latest.json
+            build-evidence/live-smoke-latest.json
+            build-evidence/browser-identity-latest.json
+            build-evidence/playback-latest.json
+            build-evidence/processing-fixture.local.json
+            build-evidence/restore-latest.json
+            build-evidence/ci-containers.log
+          if-no-files-found: warn
+          retention-days: 14
       - name: Remove only this disposable CI Docker project and its volumes
         if: always()
         run: |

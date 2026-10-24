@@ -1,15 +1,23 @@
 'use client';
 import Link from 'next/link';
-import {useEffect,useState} from 'react';
+import {useEffect,useState,useSyncExternalStore} from 'react';
 import {apiFetch} from '@/lib/api';
 type Program={id:string;titleId:string;title:string;startsAt:string;endsAt:string};
 type Guide={channel:{id:string;slug:string;name:string;description:string};programs:Program[]};
+let clockTime=0;
+function subscribeClock(notify:()=>void){
+ clockTime=Date.now();
+ const timer=window.setInterval(()=>{clockTime=Date.now();notify();},1000);
+ return()=>window.clearInterval(timer);
+}
+function clockSnapshot(){return clockTime;}
+function serverClockSnapshot(){return 0;}
 export default function ChannelsPage(){
  const [guides,setGuides]=useState<Guide[]>([]),[error,setError]=useState(''),[busy,setBusy]=useState(true);
  useEffect(()=>{const c=new AbortController();apiFetch<Guide[]>('/api/v1/catalog/channels',undefined,{signal:c.signal})
  .then(setGuides).catch(()=>{if(!c.signal.aborted)setError('Guide could not be loaded.')})
  .finally(()=>{if(!c.signal.aborted)setBusy(false)});return()=>c.abort();},[]);
- const now=Date.now();
+ const now=useSyncExternalStore(subscribeClock,clockSnapshot,serverClockSnapshot);
  return <main className="wrap viewer-shell"><div className="eyebrow">DISCOVER / PROGRAM GUIDE</div><h1>Scheduled channels<span className="title-period">.</span></h1>
  <p>Explore editorial schedules. This is an on-demand program guide, not a live broadcast; each film still requires a separate authorized playback session.</p>
  {busy&&<p>Loading guide…</p>}{error&&<p role="alert">{error}</p>}

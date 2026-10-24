@@ -1,9 +1,15 @@
 FROM maven:3.9.11-eclipse-temurin-21 AS build
 WORKDIR /src
 COPY pom.xml .
-RUN mvn -q -DskipTests dependency:go-offline
+RUN --mount=type=secret,id=java_cacerts --mount=type=secret,id=maven_settings \
+    if [ -f /run/secrets/java_cacerts ]; then export MAVEN_OPTS="${MAVEN_OPTS:-} -Djavax.net.ssl.trustStore=/run/secrets/java_cacerts"; fi; \
+    if [ -f /run/secrets/maven_settings ]; then export MAVEN_ARGS="-s /run/secrets/maven_settings"; fi; \
+    mvn -q -DskipTests dependency:go-offline
 COPY src ./src
-RUN mvn -q -DskipTests package
+RUN --mount=type=secret,id=java_cacerts --mount=type=secret,id=maven_settings \
+    if [ -f /run/secrets/java_cacerts ]; then export MAVEN_OPTS="${MAVEN_OPTS:-} -Djavax.net.ssl.trustStore=/run/secrets/java_cacerts"; fi; \
+    if [ -f /run/secrets/maven_settings ]; then export MAVEN_ARGS="-s /run/secrets/maven_settings"; fi; \
+    mvn -q -DskipTests package
 
 FROM eclipse-temurin:21-jre
 WORKDIR /app

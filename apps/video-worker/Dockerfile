@@ -4,10 +4,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg ca-certi
     && groupadd -g 10001 worker && useradd -m -u 10001 -g worker worker
 WORKDIR /work
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN --mount=type=secret,id=proxy_ca \
+    if [ -f /run/secrets/proxy_ca ]; then export PIP_CERT=/run/secrets/proxy_ca; fi; \
+    pip install --no-cache-dir -r requirements.txt
 # Include all first-party modules required transitively by worker/pipeline.
 # The old two-file image could build but fail on its very first import.
-COPY *.py ./
+COPY --chmod=0644 *.py ./
 # Fail the image build if the dependency graph is not importable.
 RUN python -c "import worker, pipeline, caption_packaging, timed_text, audio_packaging, preview_artwork"
 USER worker

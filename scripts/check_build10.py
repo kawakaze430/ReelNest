@@ -15,15 +15,17 @@ webvalidator=read('apps/web/scripts/validate-public-env.mjs')
 guard=read('apps/api/src/main/java/com/reelnest/security/DeploymentGuard.java')
 policy=read('apps/api/src/main/java/com/reelnest/security/DeploymentPolicy.java')
 privacy=read('apps/api/src/main/java/com/reelnest/privacy/PrivacyController.java')
-require('restriction_type = "whitelist"' in media and 'locations = [var.playback_country]' in media,
+require(re.search(r'restriction_type\s*=\s*"whitelist"', media)
+        and re.search(r'locations\s*=\s*\[\s*var\.playback_country\s*\]', media),
         'CloudFront geo whitelist missing')
-require('reviewed_geo_enforcement' in variables and 'default = false' in variables,'Geo attestation must be default-deny')
+require(re.search(r'variable\s+"reviewed_geo_enforcement"\s*\{[^}]*\bdefault\s*=\s*false\b', variables),
+        'Geo attestation must be default-deny')
 require('PLAYBACK_CDN_GEO_REVIEWED' in service and 'PLAYBACK_TRUSTED_COUNTRY' in service,'API/CDN territory setting missing')
-require('value=var.playback_country' in service,'Configured country mismatch')
+require(re.search(r'\bvalue\s*=\s*var\.playback_country\b', service),'Configured country mismatch')
 require('reelnest_app' in service and 'SPRING_FLYWAY_ENABLED' in service and 'runtime_db' in service,
         'Production must run with separate, non-migrating database role')
 require('master_user_secret[0].secret_arn' not in service, 'ECS secret reading must exclude DB master secret')
-require('APP_DEPLOY_MODE' in service and 'value=var.environment' in service,'Deployment guard not wired')
+require('APP_DEPLOY_MODE' in service and re.search(r'\bvalue\s*=\s*var\.environment\b', service),'Deployment guard not wired')
 require('node scripts/validate-public-env.mjs' in webdocker,'Frontend production env check not wired')
 require('new URL(raw)' in webvalidator and 'localhost' in webvalidator,'Web production env validator missing')
 require('DeploymentPolicy.validate(' in guard and 'geoReviewed' in guard,'Backend startup guard not wired')

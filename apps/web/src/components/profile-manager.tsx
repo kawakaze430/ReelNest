@@ -10,6 +10,10 @@ import type { Profile } from '@/types/catalog';
 
 export function ProfileManager() {
   const auth = useAuth();
+  return <ProfileManagerView key={auth.user?.profile.sub ?? 'anonymous'} auth={auth}/>;
+}
+
+function ProfileManagerView({auth}:{auth:ReturnType<typeof useAuth>}) {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [name, setName] = useState('');
   const [language, setLanguage] = useState<'en' | 'hi'>('en');
@@ -92,7 +96,7 @@ export function ProfileManager() {
   if (auth.isLoading) return <div className="empty"><LoaderCircle className="spin"/><p>Checking your sign-in...</p></div>;
   if (auth.error) return <div className="notice">Authentication error: {auth.error.message}. <Link href="/status">Check setup</Link></div>;
   if (!auth.isAuthenticated) return <div className="auth-gate"><div className="big-icon"><UserRound size={28}/></div><h2>Your profiles, your stories.</h2><p>Sign in with the local Keycloak identity service to create and manage viewer profiles.</p><button className="btn btn-primary" onClick={()=>void auth.signinRedirect()}><LogIn size={16}/> Sign in</button><div className="under-note">Development identity service must be running.</div></div>;
-  return <div className="profiles-panel"><div className="section-title"><div><div className="eyebrow">PERSONAL SPACES</div><h2>Who's watching<span className="title-period">?</span></h2><p>Signed in as {auth.user?.profile.email ?? 'viewer'}</p></div><button className="text-btn" onClick={()=>void auth.signoutRedirect()}>Sign out</button></div>
+  return <div className="profiles-panel"><div className="section-title"><div><div className="eyebrow">PERSONAL SPACES</div><h2>Who&apos;s watching<span className="title-period">?</span></h2><p>Signed in as {auth.user?.profile.email ?? 'viewer'}</p></div><button className="text-btn" onClick={()=>void auth.signoutRedirect()}>Sign out</button></div>
     {error && <div className="notice" role="alert">{error}</div>}
     <div className="profile-grid">{profiles.map((p,index)=><div className="profile-tile" key={p.id}><div className={`avatar avatar-${index%4}`}><UserRound size={30}/></div><strong>{p.name}</strong><span>{p.child?'Kids profile':'Standard profile'} · {p.preferredLanguage.toUpperCase()}</span><button onClick={()=>{window.localStorage.setItem(`reelnest:active-profile:${auth.user?.profile.sub ?? 'anonymous'}`,p.id);window.dispatchEvent(new Event(PROFILE_EVENT));}} className="btn btn-outline">Watch as {p.name}</button>{!p.child&&<div className="profile-pin-controls">
       <label>Adult profile PIN (six to twelve digits)

@@ -41,7 +41,7 @@ export default function StatusPage() {
       <div className="build20-status-legend">{buildStatus.statuses.map(s=><div key={s.name}><span className="build20-status-dot" style={{background:s.color}}/><span>{s.name}</span><strong>{s.count}</strong></div>)}</div>
       <p>The two blocked categories belong to the local/Codex/account-validation track. They are not counted as completed coding work.</p>
     </section>
-    <div className="timeline">{checkpoints.map((m,i)=><div className="timeline-item" key={m.name}><div className="timeline-rail">{m.done?<CircleCheck size={21}/>:<CircleDashed size={21}/>}</div><div><div className="timeline-header"><h3>{m.name}</h3><span className={m.done?'done-tag':'pending-tag'}>{m.status}</span></div><p>{m.detail}</p></div></div>)}</div>
+    <div className="timeline">{checkpoints.map(m=><div className="timeline-item" key={m.name}><div className="timeline-rail">{m.done?<CircleCheck size={21}/>:<CircleDashed size={21}/>}</div><div><div className="timeline-header"><h3>{m.name}</h3><span className={m.done?'done-tag':'pending-tag'}>{m.status}</span></div><p>{m.detail}</p></div></div>)}</div>
     <div className="notice" role="status">The application has not yet completed full Docker, Next.js, Spring, payment-provider, or AWS verification. Do not enable production checkout or release copyrighted media without permission.</div>
     <Link className="btn btn-primary" href="/browse">Explore the demo catalog <ArrowRight size={16}/></Link>
   </main>;

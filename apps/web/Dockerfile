@@ -3,7 +3,9 @@ WORKDIR /app
 # Once package-lock.json is generated and reviewed, this uses npm ci.
 # Bootstrap path supports the inherited repository which has no lockfile yet.
 COPY package*.json ./
-RUN if [ -f package-lock.json ]; then npm ci --no-audit --no-fund; \
+RUN --mount=type=secret,id=proxy_ca \
+    if [ -f /run/secrets/proxy_ca ]; then export NODE_EXTRA_CA_CERTS=/run/secrets/proxy_ca; fi; \
+    if [ -f package-lock.json ]; then npm ci --no-audit --no-fund; \
     else npm install --no-audit --no-fund; fi
 
 FROM deps AS dev

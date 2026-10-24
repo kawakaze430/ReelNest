@@ -7,7 +7,11 @@ type Collection={id:string;slug:string;heading:string;status:string;titles:Title
 type Program={id:string;titleId:string;title:string;startsAt:string;endsAt:string};
 type Guide={channel:{id:string;slug:string;name:string;status:string};programs:Program[]};
 export default function EditorialAdminPage(){
- const auth=useAuth(),token=auth.user?.access_token;
+ const auth=useAuth();
+ return <EditorialAdminView key={auth.isAuthenticated ? auth.user?.profile.sub : 'anonymous'} auth={auth}/>;
+}
+function EditorialAdminView({auth}:{auth:ReturnType<typeof useAuth>}){
+ const token=auth.user?.access_token;
  const [collections,setCollections]=useState<Collection[]>([]),[channels,setChannels]=useState<Guide[]>([]),[error,setError]=useState(''),[message,setMessage]=useState('');
  const [kind,setKind]=useState<'collection'|'channel'>('collection'),[slug,setSlug]=useState(''),[heading,setHeading]=useState('');
  const [collectionId,setCollectionId]=useState(''),[channelId,setChannelId]=useState(''),[titleId,setTitleId]=useState('');
@@ -16,7 +20,18 @@ export default function EditorialAdminPage(){
   apiFetch<Collection[]>('/api/v1/admin/collections',token),apiFetch<Guide[]>('/api/v1/admin/channels',token)]);
   setCollections(c);setChannels(ch);setCollectionId(v=>v||c[0]?.id||'');setChannelId(v=>v||ch[0]?.channel.id||'');
  }catch{setError('Administrator access or backend is unavailable.')}}
- useEffect(()=>{void refresh()},[token]);
+ useEffect(()=>{
+  if(!token)return;
+  const controller=new AbortController();
+  Promise.all([
+   apiFetch<Collection[]>('/api/v1/admin/collections',token,{signal:controller.signal}),
+   apiFetch<Guide[]>('/api/v1/admin/channels',token,{signal:controller.signal})
+  ]).then(([c,ch])=>{
+   if(controller.signal.aborted)return;
+   setCollections(c);setChannels(ch);setCollectionId(v=>v||c[0]?.id||'');setChannelId(v=>v||ch[0]?.channel.id||'');
+  }).catch(()=>{if(!controller.signal.aborted)setError('Administrator access or backend is unavailable.');});
+  return()=>controller.abort();
+ },[token]);
  async function action(run:()=>Promise<unknown>){setBusy(true);setError('');setMessage('');try{
   await run();setMessage('Change saved. Publication still requires actual rights approval and video entitlements.');await refresh();
  }catch(e){setError(String(e))}finally{setBusy(false)}}

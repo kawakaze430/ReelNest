@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import {usePathname} from 'next/navigation';
-import {useEffect,useState} from 'react';
+import {useEffect,useState,useSyncExternalStore} from 'react';
 import {Compass,Film,Menu,UserRound,X} from 'lucide-react';
 import {direction,isLocale,localeLabels,messages,type Locale} from '@/lib/localization';
 
@@ -18,16 +18,31 @@ const secondary=[
   {href:'/account/privacy',label:'Privacy'}, {href:'/support',label:'Help & FAQ'},
   {href:'/status',label:'Build status'}, {href:'/lab/drm',label:'DRM device diagnostics'},
 ];
+const LOCALE_EVENT='reelnest:locale-changed';
+function subscribeLocale(notify:()=>void){
+  window.addEventListener('storage',notify);
+  window.addEventListener(LOCALE_EVENT,notify);
+  return()=>{window.removeEventListener('storage',notify);window.removeEventListener(LOCALE_EVENT,notify);};
+}
+function localeSnapshot():Locale{
+  try{const value=window.localStorage.getItem('reelnest-ui-locale');return isLocale(value)?value:'en';}
+  catch{return 'en';}
+}
+function serverLocaleSnapshot():Locale{return 'en';}
 export function Navbar(){
   const pathname=usePathname();
+  return <NavbarView key={pathname} pathname={pathname}/>;
+}
+
+function NavbarView({pathname}:{pathname:string}){
   const [menuOpen,setMenuOpen]=useState(false);
-  const [locale,setLocale]=useState<Locale>('en');
-  useEffect(()=>{const value=window.localStorage.getItem('reelnest-ui-locale');
-    if(isLocale(value)){setLocale(value);document.documentElement.lang=value;document.documentElement.dir=direction(value);}},[]);
+  const locale=useSyncExternalStore(subscribeLocale,localeSnapshot,serverLocaleSnapshot);
+  useEffect(()=>{document.documentElement.lang=locale;document.documentElement.dir=direction(locale);},[locale]);
   const t=messages[locale];
-  function chooseLocale(next:Locale){setLocale(next);window.localStorage.setItem('reelnest-ui-locale',next);
-    document.documentElement.lang=next;document.documentElement.dir=direction(next);}
-  useEffect(()=>setMenuOpen(false),[pathname]);
+  function chooseLocale(next:Locale){
+    window.localStorage.setItem('reelnest-ui-locale',next);
+    window.dispatchEvent(new Event(LOCALE_EVENT));
+  }
   const translated:Record<string,string>={'Browse':t.browse,'For You':t.forYou,'Movies':t.movies,'Series':t.series,
     'Plans':t.plans,'My List':t.myList,'Collections':t.collections,'Channels':t.channels,'Watch Party':t.party};
   const link=(item:{href:string;label:string})=><Link key={item.href} href={item.href}

@@ -2,6 +2,7 @@ name: PostgreSQL Flyway G1 preflight (disposable)
 on:
   workflow_dispatch:
   push:
+    branches: [main]
     paths:
       - 'apps/api/**'
       - 'scripts/verify_flyway_postgres.py'
@@ -9,6 +10,9 @@ on:
       - '.github/workflows/postgres-flyway.yml'
 permissions:
   contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   db-migrations:
     runs-on: ubuntu-latest
@@ -91,3 +95,31 @@ jobs:
               conn.execute('CREATE DATABASE reelnest_upgrade')
           PY
           mvn --batch-mode --no-transfer-progress -Dtest=FlywayUpgradeTest test
+      - name: Verify nullable catalog filters and pagination on PostgreSQL
+        working-directory: apps/api
+        env:
+          REELNEST_CATALOG_DB_URL: jdbc:postgresql://127.0.0.1:5432/reelnest_catalog_test
+          REELNEST_DISPOSABLE_DB: 'true'
+        run: |
+          python3 - <<'PY'
+          import psycopg
+          with psycopg.connect('postgresql://reelnest:local_dev_only@127.0.0.1:5432/postgres',autocommit=True) as conn:
+              conn.execute('CREATE DATABASE reelnest_catalog_test')
+          PY
+          mvn --batch-mode --no-transfer-progress -Dtest=CatalogPostgresTest test
+      - name: Sanitize database-startup diagnostics
+        if: always()
+        run: |
+          if [ -f build-evidence/g1-db-startup.local.log ]; then
+            python3 scripts/cloud_evidence.py --sanitize-log build-evidence/g1-db-startup.local.log build-evidence/g1-db-startup.sanitized.log
+          fi
+      - name: Preserve migration and upgrade evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: postgres-flyway-${{ github.sha }}
+          path: |
+            build-evidence/g1-db-startup.sanitized.log
+            apps/api/target/surefire-reports/TEST-*.xml
+          if-no-files-found: warn
+          retention-days: 14

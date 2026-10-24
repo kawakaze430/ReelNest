@@ -11,13 +11,16 @@ import type {Title} from '@/types/catalog';
 
 export default function MyListPage(){
   const p=useActiveProfile();
+  return <MyListView key={`${p.auth.user?.profile.sub ?? 'anonymous'}:${p.profileId}`} p={p}/>;
+}
+
+function MyListView({p}:{p:ReturnType<typeof useActiveProfile>}){
   const [titles,setTitles]=useState<Title[]>([]);
-  const [busy,setBusy]=useState(false);
+  const [busy,setBusy]=useState(Boolean(p.token&&p.profileId));
   const [error,setError]=useState('');
   useEffect(()=>{
-    if(!p.token||!p.profileId){setTitles([]);return;}
+    if(!p.token||!p.profileId)return;
     let cancelled=false;
-    setBusy(true);setError('');
     apiFetch<Title[]>(`/api/v1/watchlist?profileId=${p.profileId}`,p.token)
       .then(data=>{if(!cancelled)setTitles(data);})
       .catch(()=>{if(!cancelled)setError('Could not load your watchlist.');})

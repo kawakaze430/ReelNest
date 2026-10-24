@@ -15,23 +15,26 @@ type SeriesEpisode = {titleId:string;name:string;synopsis:string;seasonNumber:nu
 export function TitleClient(){
   const {id}=useParams<{id:string}>();
   const viewer=useActiveProfile();
+  const [reload,setReload]=useState(0);
+  return <TitleView key={`${id}:${viewer.auth.user?.profile.sub ?? 'anonymous'}:${viewer.profileId}:${reload}`}
+    id={id} viewer={viewer} onRetry={()=>setReload(n=>n+1)}/>;
+}
+
+function TitleView({id,viewer,onRetry}:{id:string;viewer:ReturnType<typeof useActiveProfile>;onRetry:()=>void}){
   const [title,setTitle]=useState<Title|undefined>(()=>demoTitles.find(t=>t.id===id));
   const [notFound,setNotFound]=useState(false);
   const [loading,setLoading]=useState(true);
   const [catalogError,setCatalogError]=useState(false);
-  const [reload,setReload]=useState(0);
   const [notice,setNotice]=useState('');
   const [saved,setSaved]=useState(false);
   const [busy,setBusy]=useState(false);
   const [episodes,setEpisodes]=useState<SeriesEpisode[]>([]);
   const [season,setSeason]=useState(1);
   const [availability,setAvailability]=useState<{playable:boolean;code:string;message:string}|null>(null);
-  const [availabilityLoading,setAvailabilityLoading]=useState(false);
+  const [availabilityLoading,setAvailabilityLoading]=useState(Boolean(viewer.token&&viewer.profileId));
   useEffect(()=>{
     let active=true;
-    setLoading(true);setNotFound(false);setCatalogError(false);
     const fallback=demoTitles.find(t=>t.id===id);
-    setTitle(fallback);
     apiFetch<Title>(`/api/v1/catalog/${encodeURIComponent(id)}`)
       .then(t=>{if(active){setTitle(t);setLoading(false);}})
       .catch(e=>{if(active){
@@ -42,9 +45,8 @@ export function TitleClient(){
         }
       }});
     return()=>{active=false;};
-  },[id,reload]);
+  },[id]);
   useEffect(()=>{
-    setEpisodes([]);setSeason(1);
     if(title?.type!=='SERIES' || title.id!==id)return;
     let dead=false;
     void apiFetch<SeriesEpisode[]>(`/api/v1/catalog/${encodeURIComponent(id)}/episodes`)
@@ -60,10 +62,8 @@ export function TitleClient(){
     return()=>{dead=true;};
   },[id,viewer.token,viewer.profileId]);
   useEffect(()=>{
-    setAvailability(null);
     if(!viewer.token||!viewer.profileId)return;
     let dead=false;
-    setAvailabilityLoading(true);
     apiFetch<{playable:boolean;code:string;message:string}>(
       `/api/v1/playback/availability?profileId=${viewer.profileId}&titleId=${id}`,viewer.token)
       .then(result=>{if(!dead)setAvailability(result);})
@@ -92,7 +92,7 @@ export function TitleClient(){
     <p>Loading title details...</p></main>;
   if(catalogError&&!title)return <main className="wrap empty" role="alert"><h1>Catalog temporarily unavailable</h1>
     <p>We could not reach the catalog. Your account and playback access were not changed.</p>
-    <button className="btn btn-primary" type="button" onClick={()=>setReload(n=>n+1)}>Try again</button>
+    <button className="btn btn-primary" type="button" onClick={onRetry}>Try again</button>
     <Link href="/browse" className="btn btn-outline">Back to catalog</Link></main>;
   if(notFound||!title)return <main className="wrap empty"><h1>Title not available</h1><Link href="/browse" className="btn btn-outline">Back to catalog</Link></main>;
   return <main className={`detail-page poster-${title.artTone}`}><div className="detail-backdrop"><div className="detail-orb"/></div><div className="wrap detail-container">

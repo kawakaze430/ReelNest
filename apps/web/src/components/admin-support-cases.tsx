@@ -6,11 +6,26 @@ import {apiFetch} from '@/lib/api';
 type CaseItem={id:string;ownerId:string;titleId:string|null;category:string;subject:string;description:string;status:string;resolution:string|null;createdAt:string};
 type State='OPEN'|'IN_REVIEW'|'RESOLVED'|'REJECTED';
 export function AdminSupportCases(){
- const auth=useAuth();const token=auth.user?.access_token;
- const [filter,setFilter]=useState<State>('OPEN');const [items,setItems]=useState<CaseItem[]>([]);
+ const auth=useAuth();
+ return <AdminSupportQueue key={auth.isAuthenticated ? auth.user?.profile.sub : 'anonymous'} auth={auth}/>;
+}
+function AdminSupportQueue({auth}:{auth:ReturnType<typeof useAuth>}){
+ const [filter,setFilter]=useState<State>('OPEN');
+ return <SupportCaseQueue key={filter} auth={auth} filter={filter} onFilter={setFilter}/>;
+}
+function SupportCaseQueue({auth,filter,onFilter}:{auth:ReturnType<typeof useAuth>;filter:State;onFilter:(filter:State)=>void}){
+ const token=auth.user?.access_token;
+ const [items,setItems]=useState<CaseItem[]>([]);
  const [error,setError]=useState('');const [reason,setReason]=useState<Record<string,string>>({});const [busy,setBusy]=useState<string|null>(null);
  async function reload(){if(!token)return;try{setItems(await apiFetch<CaseItem[]>(`/api/v1/admin/support/cases?status=${filter}`,token));setError('');}catch{setError('You must be a moderator or administrator to review cases.');}}
- useEffect(()=>{void reload();},[token,filter]);
+ useEffect(()=>{
+  if(!token)return;
+  const controller=new AbortController();
+  apiFetch<CaseItem[]>(`/api/v1/admin/support/cases?status=${filter}`,token,{signal:controller.signal})
+   .then(rows=>{if(!controller.signal.aborted){setItems(rows);setError('');}})
+   .catch(()=>{if(!controller.signal.aborted)setError('You must be a moderator or administrator to review cases.');});
+  return()=>controller.abort();
+ },[token,filter]);
  async function decide(id:string,status:State,unpublishTitle=false){if(!token)return;
   if(unpublishTitle&&!window.confirm('Unpublish this title immediately and revoke application playback sessions? This is a privileged action.'))return;
   setBusy(id);setError('');try{
@@ -18,7 +33,7 @@ export function AdminSupportCases(){
   }catch(e){setError(e instanceof Error?e.message:'Could not save review');}finally{setBusy(null);}}
  if(!auth.isAuthenticated)return <p>Sign in as an authorized moderator or administrator to review cases.</p>;
  return <main className="wrap admin-support"><div className="eyebrow">REELNEST OPERATIONS</div><h1>Support and rights-review queue</h1><p>Decisions are recorded in an audit trail. Publishing restrictions remain enforced independently by the media API.</p><p><Link href="/admin">← Return to admin dashboard</Link></p>
-  <label>Queue<select value={filter} onChange={e=>setFilter(e.target.value as State)}><option>OPEN</option><option>IN_REVIEW</option><option>RESOLVED</option><option>REJECTED</option></select></label>
+  <label>Queue<select value={filter} disabled={busy!==null} onChange={e=>onFilter(e.target.value as State)}><option>OPEN</option><option>IN_REVIEW</option><option>RESOLVED</option><option>REJECTED</option></select></label>
   {error&&<p role="alert" className="notice">{error}</p>}
   {items.length===0&&<p>No cases in this queue.</p>}
   <div className="support-case-list">{items.map(c=><article className="support-case-item" key={c.id}>

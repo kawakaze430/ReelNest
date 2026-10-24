@@ -43,7 +43,8 @@ class Build23Contracts(unittest.TestCase):
  def test_web_routes_and_localization(self):
   for route in ('collections','channels','watch-party','admin/editorial'):
    self.assertTrue((WEB/'src/app'/route/'page.tsx').is_file())
-  self.assertIn('dir=direction(next)',(WEB/'src/components/navbar.tsx').read_text())
+  self.assertRegex((WEB/'src/components/navbar.tsx').read_text(),
+                   r'document\.documentElement\.dir\s*=\s*direction\(')
  def test_no_server_assumed_task_completion(self):
   self.assertTrue((ROOT/'docs/BUILD23_IMPLEMENTATION.md').is_file())
  def test_java_pure_policy_assertions(self):

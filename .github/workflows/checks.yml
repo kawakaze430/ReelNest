@@ -1,10 +1,79 @@
 name: Build checks
-on: [push, pull_request]
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/**'
+      - 'scripts/**'
+      - 'tests/**'
+      - 'infrastructure/**'
+      - 'compose.yaml'
+      - '.github/workflows/**'
+      - 'docs/*282_TASKS.csv'
+  pull_request:
+    paths:
+      - 'apps/**'
+      - 'scripts/**'
+      - 'tests/**'
+      - 'infrastructure/**'
+      - 'compose.yaml'
+      - '.github/workflows/**'
+      - 'docs/*282_TASKS.csv'
+  workflow_dispatch:
 permissions:
   contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+defaults:
+  run:
+    shell: bash
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      integration: ${{ steps.scope.outputs.integration }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Select changes that require full Docker integration
+        id: scope
+        env:
+          BASE_SHA: ${{ github.event.before || github.event.pull_request.base.sha || '' }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          python3 - <<'PY'
+          import os
+          import subprocess
+          from pathlib import Path
+
+          base = os.environ['BASE_SHA']
+          if os.environ['EVENT_NAME'] == 'workflow_dispatch' or not base or set(base) == {'0'}:
+              required = True
+          else:
+              files = subprocess.check_output(['git', 'diff', '--name-only', base, 'HEAD'], text=True).splitlines()
+              prefixes = ('apps/', 'infrastructure/keycloak/', 'infrastructure/minio/', 'scripts/e2e_')
+              exact_paths = {
+                  'compose.yaml',
+                  'scripts/live_smoke.py',
+                  'scripts/live_e2e_helpers.py',
+                  'scripts/security_smoke_live.sh',
+                  'scripts/validate_local_stack.sh',
+                  'scripts/test_restore_disposable.sh',
+                  'scripts/verify_flyway_postgres.py',
+                  'scripts/cloud_evidence.py',
+                  '.github/workflows/checks.yml',
+                  '.github/workflows/manual-local-integration.yml',
+              }
+              required = any(name in exact_paths or name.startswith(prefixes) for name in files)
+          with Path(os.environ['GITHUB_OUTPUT']).open('a') as output:
+              output.write(f'integration={str(required).lower()}\n')
+          PY
   api:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -15,44 +84,60 @@ jobs:
           cache-dependency-path: apps/api/pom.xml
       - name: Backend tests and compilation
         working-directory: apps/api
-        run: mvn --batch-mode --no-transfer-progress verify
+        run: mvn --batch-mode --no-transfer-progress -DfailIfNoTests=true verify
+      - name: Preserve actual JUnit results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-junit-${{ github.sha }}
+          path: apps/api/target/surefire-reports/TEST-*.xml
+          if-no-files-found: warn
+          retention-days: 14
   web:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with: {node-version: '22'}
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
       - name: Install frontend dependencies
         working-directory: apps/web
-        run: |
-          if [ -f package-lock.json ]; then npm ci --no-audit --no-fund; else npm install --no-audit --no-fund; fi
+        run: npm ci --no-audit --no-fund
       - name: Identity and environment source checks
         run: |
           python3 scripts/check_env_contracts.py
           bash scripts/test_token_claims_java.sh
           python3 -m pip install pytest
           python3 -m pytest tests/release/test_build19_contracts.py -q
-      - name: TypeScript and production build
+      - name: Lint, TypeScript and production build
         working-directory: apps/web
         run: |
           node ../../scripts/check_ts_syntax.mjs
           npm audit --omit=dev --audit-level=high
+          npm run lint
           npm run typecheck
           npm run build
   worker:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '21' 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
       - name: Install Python dependencies
-        run: python3 -m pip install pytest pyyaml boto3 'psycopg[binary]' scikit-learn fastapi httpx uvicorn
+        run: python3 -m pip install -r apps/video-worker/requirements.txt -r apps/recommendation-api/requirements.txt -r apps/recommendation-lab/requirements.txt pytest pyyaml httpx
       - name: Install FFmpeg
         run: sudo apt-get update && sudo apt-get install -y ffmpeg
       - name: Media and ML tests
-        run: python3 -m pytest apps/video-worker/tests apps/recommendation-lab/tests apps/recommendation-api/tests tests/release/test_build12_contracts.py -q
+        run: python3 -m pytest apps/video-worker/tests apps/recommendation-lab/tests apps/recommendation-api/tests tests/handoff tests/release/test_build12_contracts.py -q
       - name: Historical regressions and build 08 checks
         run: |
           python3 scripts/check_static.py
@@ -79,8 +164,21 @@ jobs:
             --security-opt no-new-privileges \
             reelnest-worker-ci ffmpeg -hide_banner -version
 
+  recommendation-image:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build actual recommendation image and verify its import closure
+        run: |
+          docker build --pull -t reelnest-recommendation-ci apps/recommendation-api
+          docker run --rm --network none --read-only --tmpfs /tmp:rw,noexec,nosuid,size=128m \
+            --cap-drop ALL --security-opt no-new-privileges \
+            reelnest-recommendation-ci python -c "import os,main,model,semantic_search; assert os.geteuid()!=0; assert main.health()=={'status':'ok'}"
+
   terraform:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: hashicorp/setup-terraform@v3
@@ -88,16 +186,21 @@ jobs:
       - name: Validate AWS infrastructure syntax and provider schema
         working-directory: infrastructure/aws
         run: |
-          terraform init -backend=false -input=false
+          terraform fmt -check -recursive
+          terraform init -backend=false -input=false -lockfile=readonly
           terraform validate
   release-offline:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
         with: {distribution: temurin, java-version: '21'}
       - uses: actions/setup-node@v4
         with: {node-version: '22'}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
       - name: Install Python test dependencies
         run: python3 -m pip install pytest pyyaml scikit-learn fastapi httpx uvicorn
       - name: Install FFmpeg
@@ -106,14 +209,26 @@ jobs:
         working-directory: apps/web
         run: npm ci --no-audit --no-fund
       - name: Run all offline release gates
-        run: python3 scripts/release_gate.py --mode offline --output docs/BUILD16_CI_RESULTS.json
+        run: python3 scripts/release_gate.py --mode offline --output build-evidence/release-offline.json
       - name: Upload evidence report
         if: always()
         uses: actions/upload-artifact@v4
-        with: {name: reelnest-build16-offline-results, path: docs/BUILD16_CI_RESULTS.json}
+        with:
+          name: release-offline-${{ github.sha }}
+          path: build-evidence/release-offline.json
+          if-no-files-found: error
+          retention-days: 14
+
+  acceptance:
+    needs: [changes, api, web, worker, worker-image, recommendation-image, release-offline]
+    if: needs.changes.outputs.integration == 'true' && github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    uses: ./.github/workflows/manual-local-integration.yml
+    with:
+      g0_components: ${{ toJSON(needs) }}
 
   aws-preview-package:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
       - name: Create safe Amplify static deployment artifact

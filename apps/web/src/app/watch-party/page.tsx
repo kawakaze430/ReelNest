@@ -1,22 +1,31 @@
 'use client';
 import Link from 'next/link';
 import {useAuth} from 'react-oidc-context';
-import {useEffect,useState} from 'react';
+import {Suspense,useEffect,useState} from 'react';
+import {useSearchParams} from 'next/navigation';
 import {apiFetch} from '@/lib/api';
 type Profile={id:string;name:string;child:boolean};
 type Room={id:string;titleId:string;hostUserId:string;version:number;positionSeconds:number;paused:boolean;updatedAt:string;expiresAt:string;members:number};
 export default function PartyPage(){
- const auth=useAuth(),token=auth.user?.access_token;
- const [profiles,setProfiles]=useState<Profile[]>([]),[profile,setProfile]=useState(''),[title,setTitle]=useState(''),[invitation,setInvitation]=useState('');
+ return <Suspense fallback={<main className="wrap viewer-shell">Loading watch party…</main>}><PartyIdentity/></Suspense>;
+}
+function PartyIdentity(){
+ const auth=useAuth(),params=useSearchParams();
+ const initialTitle=params.get('titleId')||'';
+ return <PartyView key={`${auth.user?.profile.sub ?? 'anonymous'}:${initialTitle}`} auth={auth} initialTitle={initialTitle}/>;
+}
+function PartyView({auth,initialTitle}:{auth:ReturnType<typeof useAuth>;initialTitle:string}){
+ const token=auth.user?.access_token;
+ const [profiles,setProfiles]=useState<Profile[]>([]),[profile,setProfile]=useState(''),[title,setTitle]=useState(initialTitle),[invitation,setInvitation]=useState('');
  const [room,setRoom]=useState<Room|null>(null),[code,setCode]=useState(''),[error,setError]=useState(''),[busy,setBusy]=useState(false);
  const [position,setPosition]=useState(0),[paused,setPaused]=useState(true);
- useEffect(()=>{setTitle(new URLSearchParams(window.location.search).get('titleId')||'')},[]);
  useEffect(()=>{if(!token)return;let on=true;apiFetch<Profile[]>('/api/v1/profiles',token).then(x=>{if(on){setProfiles(x);setProfile(p=>p||x[0]?.id||'')}})
  .catch(()=>{if(on)setError('Could not load profiles.')});return()=>{on=false}},[token]);
- useEffect(()=>{if(!token||!room)return;let active=true;const interval=setInterval(()=>{
- apiFetch<Room>(`/api/v1/watch-parties/${room.id}`,token).then(r=>{if(active){setRoom(r);setPosition(r.positionSeconds);setPaused(r.paused)}})
+ const roomId=room?.id;
+ useEffect(()=>{if(!token||!roomId)return;let active=true;const interval=setInterval(()=>{
+ apiFetch<Room>(`/api/v1/watch-parties/${roomId}`,token).then(r=>{if(active){setRoom(r);setPosition(r.positionSeconds);setPaused(r.paused)}})
  .catch(()=>{if(active){setRoom(null);setError('The room expired, access changed, or the connection failed.')}});
- },5000);return()=>{active=false;clearInterval(interval)};},[room?.id,token]);
+ },5000);return()=>{active=false;clearInterval(interval)};},[roomId,token]);
  async function create(){if(!token||!profile||!title)return;setBusy(true);setError('');try{
  const r=await apiFetch<{room:Room;invitation:string}>('/api/v1/watch-parties',token,{method:'POST',body:JSON.stringify({profileId:profile,titleId:title})});
  setRoom(r.room);setCode(r.invitation);setPosition(0);setPaused(true);

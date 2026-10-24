@@ -3,7 +3,7 @@
 import { useAuth } from 'react-oidc-context';
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowUpCircle, CheckCircle2, Clapperboard, FileCheck2, LoaderCircle, Plus, ShieldCheck, UploadCloud, UserRound, XCircle } from 'lucide-react';
+import { ArrowUpCircle, CheckCircle2, Clapperboard, FileCheck2, LoaderCircle, Plus, ShieldCheck, UploadCloud, XCircle } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import {inspectSrt,type CaptionQa} from '@/lib/caption-qa';
 import type { Creator, Draft, Rights, UploadIntent, MediaJob } from '@/types/creator';
@@ -14,9 +14,13 @@ const ratingChoices = ['U','UA7','UA13','UA16','A'];
 
 export function CreatorStudio() {
   const auth = useAuth();
+  return <CreatorStudioView key={auth.user?.profile.sub ?? 'anonymous'} auth={auth}/>;
+}
+
+function CreatorStudioView({auth}:{auth:ReturnType<typeof useAuth>}) {
   const token = auth.user?.access_token;
   const [creator,setCreator] = useState<Creator|null>(null);
-  const [lookup,setLookup] = useState(true);
+  const [lookup,setLookup] = useState(Boolean(token));
   const [drafts,setDrafts] = useState<Draft[]>([]);
   const [selected,setSelected] = useState<string>('');
   const [rights,setRights] = useState<Rights|null>(null);
@@ -25,7 +29,10 @@ export function CreatorStudio() {
   const [captions,setCaptions] = useState<{language:string;updatedAt:string}[]>([]);
   const [captionLanguage,setCaptionLanguage] = useState('en');
   const [captionFile,setCaptionFile] = useState<File|null>(null);
-  const [captionQa,setCaptionQa] = useState<CaptionQa|null>(null);
+  const [captionInspection,setCaptionInspection] = useState<{file:File;report:CaptionQa}|null>(null);
+  const captionQa:CaptionQa|null=captionFile&&captionFile.size>200000
+    ? {valid:false,cues:0,lastEndSeconds:0,errors:['SRT must be smaller than 200 KB.'],warnings:[]}
+    : captionFile&&captionInspection?.file===captionFile?captionInspection.report:null;
   const [busy,setBusy] = useState(false);
   const [error,setError] = useState('');
   const [success,setSuccess] = useState('');
@@ -35,35 +42,56 @@ export function CreatorStudio() {
   const [form,setForm] = useState(freshDraft);
   const [rightsForm,setRightsForm] = useState({rightsBasis:'OWNER',proofReference:'',agreementNotes:'',validFrom:'',validUntil:'',territories:'IN'});
 
-  const refreshCreator = useCallback(async()=>{
-    if (!token) {setLookup(false);return;}
-    try {setCreator(await apiFetch<Creator>('/api/v1/creators/me',token));}
-    catch {setCreator(null);}
-    finally {setLookup(false);}
-  },[token]);
-  const refreshDrafts = useCallback(async()=>{
-    if (!token) return;
-    try {setDrafts(await apiFetch<Draft[]>('/api/v1/creator/titles',token));}
-    catch {setError('Could not retrieve titles from the backend.');}
-  },[token]);
-  const refreshSelected = useCallback(async(id:string)=>{
-    if (!token || !id) return;
+  const loadSelected = useCallback(async(id:string,signal?:AbortSignal)=>{
+    if (!token || !id) return null;
     const base = `/api/v1/creator/titles/${id}`;
     const [right,files,assets,tracks] = await Promise.all([
-      apiFetch<Rights>(`${base}/rights`,token).catch(()=>null),
-      apiFetch<UploadIntent[]>(`${base}/uploads`,token),
-      apiFetch<MediaJob[]>(`${base}/media`,token),
-      apiFetch<{language:string;updatedAt:string}[]>(`${base}/captions`,token)
+      apiFetch<Rights>(`${base}/rights`,token,{signal}).catch(()=>null),
+      apiFetch<UploadIntent[]>(`${base}/uploads`,token,{signal}),
+      apiFetch<MediaJob[]>(`${base}/media`,token,{signal}),
+      apiFetch<{language:string;updatedAt:string}[]>(`${base}/captions`,token,{signal})
     ]);
+    return signal?.aborted ? null : {right,files,assets,tracks};
+  },[token]);
+  const applySelected = useCallback((result:Awaited<ReturnType<typeof loadSelected>>)=>{
+    if(!result)return;
+    const {right,files,assets,tracks}=result;
     setRights(right);setUploads(files);setMedia(assets);setCaptions(tracks);
     if (right) setRightsForm({rightsBasis:right.rightsBasis,proofReference:right.proofReference,
       agreementNotes:right.agreementNotes,validFrom:right.validFrom,validUntil:right.validUntil,
       territories:right.territories.join(',')});
-  },[token]);
+  },[]);
+  const refreshSelected = useCallback(async(id:string)=>{
+    applySelected(await loadSelected(id));
+  },[applySelected,loadSelected]);
 
-  useEffect(()=>{void refreshCreator();},[refreshCreator]);
-  useEffect(()=>{if(creator?.status==='APPROVED') void refreshDrafts();},[creator?.status,refreshDrafts]);
-  useEffect(()=>{if(selected) void refreshSelected(selected).catch(()=>setError('Failed to read title details.'));},[selected,refreshSelected]);
+  useEffect(()=>{
+    if(!token)return;
+    let active=true;
+    apiFetch<Creator>('/api/v1/creators/me',token)
+      .then(value=>{if(active)setCreator(value);})
+      .catch(()=>{if(active)setCreator(null);})
+      .finally(()=>{if(active)setLookup(false);});
+    return()=>{active=false;};
+  },[token]);
+  useEffect(()=>{
+    if(!token||creator?.status!=='APPROVED')return;
+    let active=true;
+    apiFetch<Draft[]>('/api/v1/creator/titles',token)
+      .then(value=>{if(active)setDrafts(value);})
+      .catch(()=>{if(active)setError('Could not retrieve titles from the backend.');});
+    return()=>{active=false;};
+  },[creator?.status,token]);
+  useEffect(()=>{
+    if(!selected)return;
+    const controller=new AbortController();
+    void loadSelected(selected,controller.signal).then(result=>{
+      if(!controller.signal.aborted)applySelected(result);
+    }).catch(()=>{
+      if(!controller.signal.aborted)setError('Failed to read title details.');
+    });
+    return()=>controller.abort();
+  },[selected,loadSelected,applySelected]);
 
   // Poll only while an owned title has active processing work. No background
   // polling for completed jobs or when the creator navigates away.
@@ -75,13 +103,11 @@ export function CreatorStudio() {
   },[selected,token,hasActiveMedia,refreshSelected]);
 
   useEffect(()=>{
-    setCaptionQa(null);
-    if(!captionFile)return;
-    if(captionFile.size>200000){setCaptionQa({valid:false,cues:0,lastEndSeconds:0,errors:['SRT must be smaller than 200 KB.'],warnings:[]});return;}
+    if(!captionFile||captionFile.size>200000)return;
     let cancelled=false;
     void captionFile.text().then(text=>{
-      if(!cancelled)setCaptionQa(inspectSrt(text));
-    }).catch(()=>{if(!cancelled)setCaptionQa({valid:false,cues:0,lastEndSeconds:0,errors:['Unable to read SRT file.'],warnings:[]});});
+      if(!cancelled)setCaptionInspection({file:captionFile,report:inspectSrt(text)});
+    }).catch(()=>{if(!cancelled)setCaptionInspection({file:captionFile,report:{valid:false,cues:0,lastEndSeconds:0,errors:['Unable to read SRT file.'],warnings:[]}});});
     return()=>{cancelled=true;};
   },[captionFile]);
 

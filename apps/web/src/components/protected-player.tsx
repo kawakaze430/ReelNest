@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useAuth } from 'react-oidc-context';
 import {
@@ -30,23 +31,59 @@ function trackLabel(language:string, label:string):string {
   return label || name || 'Unknown';
 }
 
+type NextEpisode = {titleId:string;name:string;seasonNumber:number;episodeNumber:number};
+
+function UpNext({episode,autoplay}:{episode:NextEpisode;autoplay:boolean}) {
+  const router=useRouter();
+  const [cancelled,setCancelled]=useState(false);
+  const [seconds,setSeconds]=useState(10);
+  const countdown=autoplay&&!cancelled?seconds:null;
+  useEffect(()=>{
+    if(!autoplay || cancelled)return;
+    const timer=setInterval(()=>setSeconds(value=>Math.max(0,value-1)),1000);
+    return()=>clearInterval(timer);
+  },[autoplay,cancelled]);
+  useEffect(()=>{
+    if(countdown===0)router.push(`/watch/${encodeURIComponent(episode.titleId)}`);
+  },[countdown,episode.titleId,router]);
+  return <section className="viewer-up-next" aria-label="Next episode" aria-live="polite">
+    <div><strong>Up next: S{episode.seasonNumber} E{episode.episodeNumber} — {episode.name}</strong>
+      <p>{countdown!==null?`Playing next episode in ${countdown} seconds`:'Continue the series when you are ready.'}</p></div>
+    <div className="viewer-up-next-actions">
+      <button type="button" className="btn btn-primary" onClick={()=>router.push(`/watch/${encodeURIComponent(episode.titleId)}`)}>Play next</button>
+      {countdown!==null&&<button type="button" className="btn btn-outline" onClick={()=>setCancelled(true)}>Cancel autoplay</button>}
+    </div>
+  </section>;
+}
+
 export function ProtectedPlayer({titleId}:{titleId:string}) {
-  const auth = useAuth();
-  const router = useRouter();
-  const profile = useActiveProfile();
-  const token = auth.user?.access_token;
+  const auth=useAuth();
+  const profile=useActiveProfile();
+  const [retry,setRetry]=useState(0);
+  const token=auth.user?.access_token;
+  if(auth.isLoading || profile.loading)return <main className="wrap viewer-shell"><p>Loading viewer identity...</p></main>;
+  if(!auth.isAuthenticated || !token)return <main className="wrap viewer-shell"><h1>Sign in to watch</h1><p>Video playback requires an authenticated viewer account.</p><button className="btn btn-primary" onClick={()=>void auth.signinRedirect()}>Sign in</button></main>;
+  if(!profile.profileId)return <main className="wrap viewer-shell"><h1>Select a viewer profile</h1><ProfilePicker/></main>;
+  // The media element and its session effects mount together only after identity
+  // resolution. A different owner/profile/title or explicit retry gets a fresh
+  // player, so old sessions and private previews cannot cross that boundary.
+  return <AuthorizedPlayer key={`${auth.user?.profile.sub}:${profile.profileId}:${titleId}:${retry}`}
+    titleId={titleId} profileId={profile.profileId} token={token} onRetry={()=>setRetry(v=>v+1)}/>;
+}
+
+function AuthorizedPlayer({titleId,profileId,token,onRetry}:{titleId:string;profileId:string;token:string;onRetry:()=>void}) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<Hls|null>(null);
-  const prefsRef = useRef<PlayerPreferences>({...DEFAULT_PLAYER_PREFERENCES});
+  const [prefs,setPrefs] = useState<PlayerPreferences>(()=>loadPreferences(profileId));
+  const prefsRef = useRef<PlayerPreferences>(prefs);
   const prefsVersionRef = useRef(0);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout>|null>(null);
   const saveChainRef = useRef<Promise<void>>(Promise.resolve());
   const touchTapRef = useRef<{time:number,x:number}|null>(null);
-  const [prefs,setPrefs] = useState<PlayerPreferences>({...DEFAULT_PLAYER_PREFERENCES});
   const [session,setSession] = useState<PlaybackSession|null>(null);
   const [ready,setReady] = useState(false);
   const [error,setError] = useState('');
-  const [mode,setMode] = useState('Starting...');
+  const [mode,setMode] = useState('Checking your access...');
   const [position,setPosition] = useState(0);
   const [playing,setPlaying] = useState(false);
   const [muted,setMuted] = useState(false);
@@ -61,31 +98,26 @@ export function ProtectedPlayer({titleId}:{titleId:string}) {
   const [subtitleTracks,setSubtitleTracks] = useState<TrackOption[]>([]);
   const [audioTrack,setAudioTrack] = useState(-1);
   const [subtitleTrack,setSubtitleTrack] = useState(-1);
-  const [retry,setRetry] = useState(0);
   const [networkRecovery,setNetworkRecovery] = useState('');
   const [previews,setPreviews] = useState<PreviewCue[]>([]);
   const [hoverTime,setHoverTime] = useState<number|null>(null);
-  const [previewImage,setPreviewImage] = useState<string|null>(null);
+  const [previewImages,setPreviewImages] = useState<Record<string,string>>({});
   const previewObjectsRef=useRef<Map<string,string>>(new Map());
   const previewAbortRef=useRef<AbortController|null>(null);
   const qoeQueueRef=useRef<QoeReplayQueue|null>(null);
-  const [nextEpisode,setNextEpisode] = useState<{titleId:string;name:string;seasonNumber:number;episodeNumber:number}|null>(null);
+  const [nextEpisode,setNextEpisode] = useState<NextEpisode|null>(null);
   const [ended,setEnded] = useState(false);
-  const [autoplayCancelled,setAutoplayCancelled] = useState(false);
-  const [countdown,setCountdown] = useState<number|null>(null);
 
   // Keep device settings as a fallback, but synchronize to the owned server profile.
   // Only the latest profile/unsaved revision may apply a server GET result.
   const changePrefs = useCallback((patch:Partial<PlayerPreferences>) => {
     const updated={...prefsRef.current,...patch};
+    if(patch.dataSaver && selectedQuality>=0 && qualities[selectedQuality]?.height>480)setSelectedQuality(-1);
     prefsVersionRef.current++;
     prefsRef.current=updated;
     setPrefs(updated);
-    if(!profile.profileId)return;
-    savePreferences(profile.profileId,updated);
+    savePreferences(profileId,updated);
     if(saveTimerRef.current)clearTimeout(saveTimerRef.current);
-    if(!token)return;
-    const profileId=profile.profileId;
     saveTimerRef.current=setTimeout(()=>{
       saveChainRef.current=saveChainRef.current.catch(()=>{}).then(async()=>{
         await apiFetch(`/api/v1/profiles/${profileId}/player-preferences`,token,{
@@ -93,17 +125,11 @@ export function ProtectedPlayer({titleId}:{titleId:string}) {
         });
       }).catch(()=>{ /* Device-local preferences remain usable if profile sync is offline. */ });
     },500);
-  },[profile.profileId,token]);
+  },[profileId,token,selectedQuality,qualities]);
 
   useEffect(() => {
-    const profileId=profile.profileId;
     const version=++prefsVersionRef.current;
     if(saveTimerRef.current)clearTimeout(saveTimerRef.current);
-    const next=profileId ? loadPreferences(profileId) : {...DEFAULT_PLAYER_PREFERENCES};
-    prefsRef.current=next;
-    setPrefs(next);
-    if(videoRef.current)videoRef.current.playbackRate=next.speed;
-    if(!profileId || !token)return;
     let dead=false;
     void apiFetch<PlayerPreferences>(`/api/v1/profiles/${profileId}/player-preferences`,token)
       .then(remote=>{
@@ -115,7 +141,7 @@ export function ProtectedPlayer({titleId}:{titleId:string}) {
         savePreferences(profileId,clean);
       }).catch(()=>{});
     return()=>{dead=true;if(saveTimerRef.current)clearTimeout(saveTimerRef.current);};
-  },[profile.profileId,token]);
+  },[profileId,token]);
 
   useEffect(() => {
     if(videoRef.current) videoRef.current.playbackRate=prefs.speed;
@@ -127,7 +153,7 @@ export function ProtectedPlayer({titleId}:{titleId:string}) {
     const levels=hls.levels.map(l=>l.height);
     hls.autoLevelCapping=prefs.dataSaver ? cappedQualityIndex(levels) : -1;
     if(prefs.dataSaver && selectedQuality>=0 && levels[selectedQuality]>480) {
-      hls.currentLevel=-1;setSelectedQuality(-1);
+      hls.currentLevel=-1;
     }
   },[prefs.dataSaver,selectedQuality]);
 
@@ -137,9 +163,10 @@ export function ProtectedPlayer({titleId}:{titleId:string}) {
 
   useEffect(() => {
     const currentVideo=videoRef.current;
-    if (!currentVideo || !token || !profile.profileId || !auth.isAuthenticated) return;
+    if (!currentVideo) return;
     // The stable non-null alias is safe in asynchronous HLS callbacks after teardown guards.
     const video: HTMLVideoElement = currentVideo;
+    const previewObjects=previewObjectsRef.current;
     let dead=false;
     let tick: ReturnType<typeof setInterval>|undefined;
     let heart: ReturnType<typeof setInterval>|undefined;
@@ -172,14 +199,6 @@ export function ProtectedPlayer({titleId}:{titleId:string}) {
       qoeQueue.enqueue({eventId:crypto.randomUUID(),eventType,
         elapsedMs:elapsedMs??null,qualityHeight:qualityHeight??null,errorCode:errorCode??null});
     };
-    setSession(null);setReady(false);setError('');setMode('Checking your access...');setNetworkRecovery('');
-    setQualities([]);setSelectedQuality(-1);setActiveQuality('Auto');
-    setAudioTracks([]);setSubtitleTracks([]);setAudioTrack(-1);setSubtitleTrack(-1);
-    setPreviews([]);setHoverTime(null);setPreviewImage(null);setEnded(false);setCountdown(null);setAutoplayCancelled(false);
-    previewAbortRef.current?.abort();
-    for(const url of previewObjectsRef.current.values())URL.revokeObjectURL(url);
-    previewObjectsRef.current.clear();
-    hlsRef.current=null;
 
     async function report(force=false) {
       if (!video || !current || dead || !Number.isFinite(video.currentTime)) return;
@@ -243,7 +262,7 @@ export function ProtectedPlayer({titleId}:{titleId:string}) {
     async function start() {
       try {
         const created=await apiFetch<PlaybackSession>('/api/v1/playback/sessions',token,{
-          method:'POST',body:JSON.stringify({titleId,profileId:profile.profileId}),signal:controller.signal
+          method:'POST',body:JSON.stringify({titleId,profileId:profileId}),signal:controller.signal
         });
         if (dead) {
           void apiFetch<void>(`/api/v1/playback/sessions/${created.sessionId}`,token,{method:'DELETE'}).catch(()=>{});
@@ -385,8 +404,8 @@ export function ProtectedPlayer({titleId}:{titleId:string}) {
       qoeQueue.dispose();
       if(qoeQueueRef.current===qoeQueue)qoeQueueRef.current=null;
       previewAbortRef.current?.abort();
-      for(const url of previewObjectsRef.current.values())URL.revokeObjectURL(url);
-      previewObjectsRef.current.clear();
+      for(const url of previewObjects.values())URL.revokeObjectURL(url);
+      previewObjects.clear();
       if(tick)clearInterval(tick);if(heart)clearInterval(heart);if(recoveryTimer)clearTimeout(recoveryTimer);
       video.removeEventListener('pause',onPause);video.removeEventListener('ended',onEnded);
       video.removeEventListener('waiting',onWaiting);video.removeEventListener('playing',onPlaying);
@@ -402,45 +421,28 @@ export function ProtectedPlayer({titleId}:{titleId:string}) {
         void apiFetch<void>(`/api/v1/playback/sessions/${current.sessionId}`,token,{method:'DELETE'}).catch(()=>{});
       }
     };
-  },[token,profile.profileId,titleId,auth.isAuthenticated,retry]);
+  },[token,profileId,titleId]);
 
   // Resolve next episode on the server: it checks profile ownership, country rights,
   // age policy, processed media and subscription before returning any navigation target.
   useEffect(()=>{
-    setNextEpisode(null);
-    if(!token || !profile.profileId || !auth.isAuthenticated)return;
     let dead=false;
     void apiFetch<{titleId:string;name:string;seasonNumber:number;episodeNumber:number}|undefined>(
-      `/api/v1/playback/next-episode?profileId=${profile.profileId}&titleId=${titleId}`,token)
+      `/api/v1/playback/next-episode?profileId=${profileId}&titleId=${titleId}`,token)
       .then(next=>{if(!dead)setNextEpisode(next??null);}).catch(()=>{});
     return()=>{dead=true;};
-  },[token,profile.profileId,titleId,auth.isAuthenticated]);
-
-  useEffect(()=>{
-    if(!ended || !nextEpisode || !prefs.autoplayNext || autoplayCancelled){setCountdown(null);return;}
-    setCountdown(10);
-    const timer=setInterval(()=>setCountdown(v=>v===null?null:Math.max(0,v-1)),1000);
-    return()=>clearInterval(timer);
-  },[ended,nextEpisode,prefs.autoplayNext,autoplayCancelled]);
-  useEffect(()=>{
-    if(countdown===0 && nextEpisode && ended && !autoplayCancelled && prefs.autoplayNext){
-      setCountdown(null);
-      router.push(`/watch/${encodeURIComponent(nextEpisode.titleId)}`);
-    }
-  },[countdown,nextEpisode,ended,autoplayCancelled,prefs.autoplayNext,router]);
+  },[token,profileId,titleId]);
 
   // Load only the hovered private JPEG through a bearer-authenticated fetch (or CDN cookies).
   // Never embed a bearer token in a URL, and bound object URLs to twelve cached images.
+  // Selection is derived from the current authorized manifest and watched time;
+  // a previously fetched atlas is never shown while a different one loads.
+  const previewCue=hoverTime!==null && hoverTime<=position+5 ? previewAt(previews,hoverTime) : null;
+  const previewPath=session?.manifestUrl&&previewCue?previewUrl(session.manifestUrl,previewCue.filename):null;
+  const previewImage=previewPath?previewImages[previewPath]??null:null;
   useEffect(()=>{
-    // Do not reveal future frames while scrubbing: only already-watched content
-    // (plus a small seek tolerance) receives a visual preview.
-    const cue=hoverTime!==null && hoverTime<=position+5 ? previewAt(previews,hoverTime) : null;
-    const manifest=session?.manifestUrl;
-    const imagePath=manifest&&cue?previewUrl(manifest,cue.filename):null;
-    if(!imagePath || !token){setPreviewImage(null);return;}
-    const cached=previewObjectsRef.current.get(imagePath);
-    if(cached){setPreviewImage(cached);return;}
-    setPreviewImage(null); // Never display a stale frame from a different atlas.
+    const imagePath=previewPath;
+    if(!imagePath || previewImages[imagePath])return;
     const controller=new AbortController();
     previewAbortRef.current?.abort();previewAbortRef.current=controller;
     const timer=setTimeout(()=>{
@@ -452,15 +454,20 @@ export function ProtectedPlayer({titleId}:{titleId:string}) {
           if(!blob || controller.signal.aborted || blob.size>1000000)return;
           const url=URL.createObjectURL(blob);
           previewObjectsRef.current.set(imagePath,url);
+          let evicted:string|undefined;
           if(previewObjectsRef.current.size>12){
-            const first=previewObjectsRef.current.keys().next().value;
-            if(first){URL.revokeObjectURL(previewObjectsRef.current.get(first)!);previewObjectsRef.current.delete(first);}
+            evicted=previewObjectsRef.current.keys().next().value;
+            if(evicted){URL.revokeObjectURL(previewObjectsRef.current.get(evicted)!);previewObjectsRef.current.delete(evicted);}
           }
-          setPreviewImage(url);
+          setPreviewImages(previous=>{
+            const updated={...previous,[imagePath]:url};
+            if(evicted)delete updated[evicted];
+            return updated;
+          });
         }).catch(()=>{});
     },120);
     return()=>{clearTimeout(timer);controller.abort();};
-  },[previews,hoverTime,position,session?.manifestUrl,token]);
+  },[previewPath,previewImages,token]);
 
   function chooseQuality(level:number) {
     const player=hlsRef.current;
@@ -543,18 +550,19 @@ export function ProtectedPlayer({titleId}:{titleId:string}) {
     document.addEventListener('fullscreenchange',onFull);
     video?.addEventListener('enterpictureinpicture',onEnterPiP);
     video?.addEventListener('leavepictureinpicture',onLeavePiP);
-    setPipAvailable(Boolean(video && document.pictureInPictureEnabled && !video.disablePictureInPicture));
-    setPip(Boolean(video && document.pictureInPictureElement===video));
     return ()=>{
       document.removeEventListener('fullscreenchange',onFull);
       video?.removeEventListener('enterpictureinpicture',onEnterPiP);
       video?.removeEventListener('leavepictureinpicture',onLeavePiP);
     };
-  },[auth.isAuthenticated,profile.profileId]);
+  },[]);
 
-  if (auth.isLoading || profile.loading) return <main className="wrap viewer-shell"><p>Loading viewer identity...</p></main>;
-  if (!auth.isAuthenticated) return <main className="wrap viewer-shell"><h1>Sign in to watch</h1><p>Video playback requires an authenticated viewer account.</p><button className="btn btn-primary" onClick={()=>void auth.signinRedirect()}>Sign in</button></main>;
-  if (!profile.profileId) return <main className="wrap viewer-shell"><h1>Select a viewer profile</h1><ProfilePicker/></main>;
+  const captureVideo=useCallback((video:HTMLVideoElement|null)=>{
+    videoRef.current=video;
+    if(!video)return;
+    setPipAvailable(Boolean(document.pictureInPictureEnabled && !video.disablePictureInPicture));
+    setPip(document.pictureInPictureElement===video);
+  },[]);
   return <main className="wrap viewer-shell">
     <div className="viewer-toolbar"><Link href={`/title/${titleId}`} className="back-link"><ArrowLeft size={17}/> Title details</Link><ProfilePicker compact/></div>
     <div className="viewer-heading"><div className="eyebrow"><ShieldCheck size={14}/> PRIVATE STREAMING</div><h1>Now watching<span className="title-period">.</span></h1></div>
@@ -572,7 +580,7 @@ export function ProtectedPlayer({titleId}:{titleId:string}) {
         case 'l':e.preventDefault();seek(10);break;
       }
     }}>
-      <video ref={videoRef} controls playsInline preload="metadata" className={`viewer-video caption-${prefs.captionSize} caption-${prefs.captionContrast}`}
+      <video ref={captureVideo} controls playsInline preload="metadata" className={`viewer-video caption-${prefs.captionSize} caption-${prefs.captionContrast}`}
         onTimeUpdate={e=>setPosition(e.currentTarget.currentTime)}
         onTouchEnd={handleTouchEnd}
         onPlay={()=>setPlaying(true)} onPause={()=>setPlaying(false)}
@@ -587,26 +595,20 @@ export function ProtectedPlayer({titleId}:{titleId:string}) {
         onChange={e=>{const v=videoRef.current;if(v&&ready)v.currentTime=Number(e.target.value);}}
         onPointerMove={e=>{const rect=e.currentTarget.getBoundingClientRect();if(rect.width>0)
           setHoverTime(Math.max(0,Math.min(session.durationSeconds,Math.round((e.clientX-rect.left)/rect.width*session.durationSeconds))));}}
-        onPointerLeave={()=>{setHoverTime(null);setPreviewImage(null);}}
-        onBlur={()=>{setHoverTime(null);setPreviewImage(null);}}
+        onPointerLeave={()=>{setHoverTime(null);}}
+        onBlur={()=>{setHoverTime(null);}}
         aria-label="Seek within video"/>
       {hoverTime!==null&&<div className="viewer-seek-preview" role="status">
         {previewImage&&hoverTime<=position+5&&(previewAt(previews,hoverTime)?.crop ?
           <span role="img" aria-label="Video frame preview" style={{display:'block',width:160,height:90,
             backgroundImage:`url(${previewImage})`,backgroundSize:'1600px 900px',
             backgroundPosition:`-${(previewAt(previews,hoverTime)?.crop?.x??0)/2}px -${(previewAt(previews,hoverTime)?.crop?.y??0)/2}px`}}/> :
-          <img src={previewImage} alt="Video frame preview" width={160} height={90}/>)}
+          <Image src={previewImage} alt="Video frame preview" width={160} height={90} unoptimized/>)}
         <span>{prettyTime(hoverTime)}{hoverTime>position+5?' · Preview hidden to avoid spoilers':''}</span>
       </div>}
     </div>}
-    {ended&&nextEpisode&&<section className="viewer-up-next" aria-label="Next episode" aria-live="polite">
-      <div><strong>Up next: S{nextEpisode.seasonNumber} E{nextEpisode.episodeNumber} — {nextEpisode.name}</strong>
-        <p>{countdown!==null?`Playing next episode in ${countdown} seconds`:'Continue the series when you are ready.'}</p></div>
-      <div className="viewer-up-next-actions">
-        <button type="button" className="btn btn-primary" onClick={()=>router.push(`/watch/${encodeURIComponent(nextEpisode.titleId)}`)}>Play next</button>
-        {countdown!==null&&<button type="button" className="btn btn-outline" onClick={()=>{setAutoplayCancelled(true);setCountdown(null);}}>Cancel autoplay</button>}
-      </div>
-    </section>}
+    {ended&&nextEpisode&&<UpNext key={`${nextEpisode.titleId}:${prefs.autoplayNext}`}
+      episode={nextEpisode} autoplay={prefs.autoplayNext}/>}
     <div className="viewer-transport" role="group" aria-label="Video playback controls">
       <button type="button" disabled={!session || !ready} onClick={()=>void togglePlay()} aria-label={playing?'Pause video':'Play video'}>{playing?<Pause size={17}/>:<Play size={17}/>}<span>{playing?'Pause':'Play'}</span></button>
       <button type="button" disabled={!session || !ready} onClick={()=>seek(-10)} aria-label="Rewind ten seconds"><SkipBack size={17}/> <span>10s</span></button>
@@ -639,7 +641,7 @@ export function ProtectedPlayer({titleId}:{titleId:string}) {
     {networkRecovery&&<p className="viewer-support-note" role="status" aria-live="polite">{networkRecovery}</p>}
     {nativeHls&&<p className="viewer-support-note">Safari native HLS manages adaptive quality internally. Manual quality control is unavailable here. Audio language selection uses native track controls only when Safari exposes them; captions are available when the stream provides them. Data saver does not cap native playback.</p>}
     {(!audioTracks.length || !subtitleTracks.length)&&<p className="viewer-support-note">Audio and subtitle choices appear only when the licensed HLS package includes alternate tracks. Preferences are stored on this device and synchronized to your signed-in profile when the API is available.</p>}
-    {error&&<div className="notice studio-error" role="alert"><AlertTriangle size={18}/><div>{error}<p>Check your account access, streaming rights and network. The Retry button requests a fresh authorized session; it does not bypass entitlements.</p></div><button className="btn btn-outline" onClick={()=>setRetry(v=>v+1)}><RotateCcw size={16}/> Retry</button></div>}
+    {error&&<div className="notice studio-error" role="alert"><AlertTriangle size={18}/><div>{error}<p>Check your account access, streaming rights and network. The Retry button requests a fresh authorized session; it does not bypass entitlements.</p></div><button className="btn btn-outline" onClick={onRetry}><RotateCcw size={16}/> Retry</button></div>}
     <div className="viewer-hint"><Film size={17}/> Only approved, licensed and READY titles can stream. Premium playback additionally requires a verified subscription. The private API-to-MinIO proxy is for local testing only.</div>
   </main>;
 }

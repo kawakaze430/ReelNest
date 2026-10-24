@@ -27,7 +27,12 @@ async function loadCheckoutSdk():Promise<void>{
   if(!window.Razorpay)throw new Error('Payment checkout SDK unavailable');
 }
 export function BillingPanel(){
-  const auth=useAuth();const token=auth.user?.access_token;
+  const auth=useAuth();
+  return <BillingView key={auth.user?.profile.sub ?? 'anonymous'} auth={auth}/>;
+}
+
+function BillingView({auth}:{auth:ReturnType<typeof useAuth>}){
+  const token=auth.user?.access_token;
   const [plans,setPlans]=useState<Plan[]>([]);
   const [billing,setBilling]=useState<Billing|null>(null);
   const [busy,setBusy]=useState('');const [error,setError]=useState('');const [message,setMessage]=useState('');
@@ -38,9 +43,11 @@ export function BillingPanel(){
   useEffect(()=>{
     let live=true;
     apiFetch<Plan[]>('/api/v1/billing/plans').then(data=>{if(live)setPlans(data);}).catch(()=>{if(live)setError('Plans could not be loaded. Is the API online?');});
-    if(token)void refresh().catch(()=>{if(live)setError('Unable to retrieve your subscription.');});
+    if(token)void apiFetch<Billing>('/api/v1/billing/me',token)
+      .then(result=>{if(live)setBilling(result);})
+      .catch(()=>{if(live)setError('Unable to retrieve your subscription.');});
     return()=>{live=false;};
-  },[token,refresh]);
+  },[token]);
   async function subscribe(code:string){
     if(!token){await auth.signinRedirect();return;}
     setBusy(code);setError('');setMessage('');
