@@ -105,6 +105,8 @@ jobs:
       - name: Install locked frontend dependencies for pure TypeScript player tests
         working-directory: apps/web
         run: npm ci --no-audit --no-fund
+      - name: Verify new scene guards and 282 task preservation
+        run: python3 -m pytest tests/release/test_build32_scenes.py tests/release/test_build32_status.py -q
       - name: Run all offline release gates
         run: python3 scripts/release_gate.py --mode offline --output docs/BUILD16_CI_RESULTS.json
       - name: Upload evidence report
