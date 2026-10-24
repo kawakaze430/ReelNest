@@ -85,7 +85,7 @@ jobs:
           python3 scripts/test_avod_schema_live.py
           python3 -m pytest tests/release/test_build27_flyway_contract.py -q
 
-      - name: Verify V1–V9 to V25 upgrade on a separate disposable database
+      - name: Verify V1–V9 to V27 upgrade on a separate disposable database
         working-directory: apps/api
         env:
           REELNEST_UPGRADE_DB_URL: jdbc:postgresql://127.0.0.1:5432/reelnest_upgrade

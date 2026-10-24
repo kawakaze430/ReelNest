@@ -4,7 +4,7 @@ GitHub `kawakaze430/ReelNest`, branch `main`, remains canonical. This pass began
 
 ## Repairs
 
-- **Catalog:** missing search filters caused PostgreSQL `lower(bytea)` and HTTP 500. Explicit HQL string casts preserve null/mixed filters, case-insensitive matching and pagination. Three real PostgreSQL regressions failed before the repair and passed afterward. CI now runs them on a dedicated disposable database.
+- **Catalog:** missing search filters caused PostgreSQL `lower(bytea)` and HTTP 500. Explicit SQL text casts preserve null/mixed filters, case-insensitive matching and pagination. Three real PostgreSQL regressions failed before the repair and passed afterward. CI now runs them on a dedicated disposable database.
 - **Containers:** the recommendation image omitted a required semantic-search module. Python images now include their first-party module closure, verify imports and give their nonroot users readable modules. A read-only, network-disabled nonroot recommendation import/health check passed. Optional build-only CA mounts preserve TLS verification; build contexts exclude local secrets/caches.
 - **Identity/UI:** synthetic Keycloak users now have required first/last names, preserving PKCE and profile requirements. Profiles are tagged to the current identity/token, private views reset at identity/profile boundaries, and the player mounts its session effects only after identity/profile resolution. Stale requests are cancelled. Lint rules were not disabled.
 - **Browser behavior:** real tests verify two accounts' PKCE login, owned profile picker, persisted Arabic RTL/English LTR, and mounted player requests using owned profiles. Unprocessed metadata correctly returns 404. This is **not** decoded-media playback evidence.
@@ -33,7 +33,7 @@ Final commands exited 0 unless stated otherwise.
 | TV client tests | Node test runner passed the public catalog/origin/navigation check. Native Android/iOS compilation and hardware playback were not performed. |
 | npm production dependency audit | 0 vulnerabilities reported; this is not a license audit or security sign-off. |
 | Terraform | Formatter, backend-disabled init, readonly-lock init and provider-schema validation passed without the prior lifecycle warning. |
-| GitHub workflow static checks | Actionlint passed all three workflows; behavior tests execute the actual change selector/evidence runner. |
+| GitHub workflow static checks | Actionlint passed all four workflows; behavior tests execute the actual change selector/evidence runner. |
 | Reusable cloud setup | Verified Maven/JDK activation, dynamic proxy/CA files, pinned Python requirements, frozen npm refresh and generated local Compose configuration passed. |
 
 Reports/logs remain in ignored `build-evidence/`: `cloud-g0-latest.json`, `browser-identity-latest.json`, `auth-browser-latest.json`, `restore-latest.json` and `ownership-pass/`. Generated output, raw logs, credentials, dumps and dependency trees are not committed. Known automatic Next.js type/config edits are removed before committing.
