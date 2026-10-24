@@ -1,0 +1,32 @@
+name: ReelNestCatalogPreview
+options:
+  bundleIdPrefix: com.reelnest.preview
+targets:
+  ReelNestCatalogPreview:
+    type: application
+    platform: iOS
+    deploymentTarget: "16.0"
+    sources:
+      - path: Shared
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.reelnest.preview.catalog
+        SWIFT_VERSION: "5.9"
+        TARGETED_DEVICE_FAMILY: "1,2"
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: ReelNest Catalog Preview
+        INFOPLIST_KEY_ReelNestAPIOrigin: https://api.example.org
+  ReelNestTVPreview:
+    type: application
+    platform: tvOS
+    deploymentTarget: "16.0"
+    sources:
+      - path: Shared
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.reelnest.preview.tv
+        SWIFT_VERSION: "5.9"
+        TARGETED_DEVICE_FAMILY: "3"
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: ReelNest TV Catalog Preview
+        INFOPLIST_KEY_ReelNestAPIOrigin: https://api.example.org
