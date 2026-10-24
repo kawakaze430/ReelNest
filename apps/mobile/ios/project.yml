@@ -16,6 +16,7 @@ targets:
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_CFBundleDisplayName: ReelNest Catalog Preview
         INFOPLIST_KEY_ReelNestAPIOrigin: https://api.example.org
+        INFOPLIST_KEY_CFBundleURLTypes: '[{"CFBundleURLName":"com.reelnest.catalog.preview","CFBundleURLSchemes":["reelnest-preview"]}]'
   ReelNestTVPreview:
     type: application
     platform: tvOS
@@ -30,3 +31,4 @@ targets:
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_CFBundleDisplayName: ReelNest TV Catalog Preview
         INFOPLIST_KEY_ReelNestAPIOrigin: https://api.example.org
+        INFOPLIST_KEY_CFBundleURLTypes: '[{"CFBundleURLName":"com.reelnest.catalog.preview","CFBundleURLSchemes":["reelnest-preview"]}]'

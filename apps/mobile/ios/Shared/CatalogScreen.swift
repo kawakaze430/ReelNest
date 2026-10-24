@@ -47,6 +47,7 @@ private struct CatalogResponse: Decodable {
 
 struct CatalogScreen: View {
     @StateObject private var model=CatalogViewModel()
+    @State private var deepLinkNotice=""
     var body: some View {
         NavigationStack {
             List {
@@ -68,6 +69,16 @@ struct CatalogScreen: View {
                 }
             }
             .navigationTitle("ReelNest Catalog Preview")
+.safeAreaInset(edge:.bottom) {
+                if !deepLinkNotice.isEmpty { Text(deepLinkNotice).font(.caption).padding() }
+            }
+            .onOpenURL { url in
+                if SafeCatalogLink.titleId(from:url) != nil {
+                    deepLinkNotice="Validated catalog link. Media playback remains disabled."
+                } else {
+                    deepLinkNotice="Invalid catalog link rejected."
+                }
+            }
             .task { await model.load() }
         }
     }
