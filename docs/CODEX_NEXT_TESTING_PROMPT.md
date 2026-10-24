@@ -1,6 +1,6 @@
 # ReelNest: continue testing and fixing GitHub main
 
-Use this prompt for the next Codex execution session. GitHub `kawakaze430/ReelNest`, branch `main`, is the canonical source. Read `AGENTS.md`, `docs/EXECUTION_STATUS.md`, the latest numbered status/task ledger, and the current workflows before acting.
+Use this prompt for the next Codex execution session. GitHub `kawakaze430/ReelNest`, branch `main`, is the canonical source. Read `AGENTS.md`, `docs/EXECUTION_STATUS.md`, the latest numbered status/task ledger, `docs/REELNEST_MASTER_282_CHECKLIST.md`, `docs/REELNEST_TEST_EVIDENCE_AND_GATES.md`, and the current workflows before acting.
 
 Take ownership of the requested execution checks and their concrete failures. Finish independent work before reporting an external blocker. Do not infer production readiness from a successful build.
 
@@ -52,7 +52,7 @@ The runner requires successful G0 evidence for the exact source, not a historica
 Verify all of the following with actual responses and browser behavior:
 
 - Every required image builds, each service starts, and Keycloak discovery, API, web and recommendation readiness succeed.
-- PostgreSQL has exactly V1–V25 in successful order. Verify clean migration and V9 → V25 upgrade/idempotency separately against disposable databases.
+- PostgreSQL has exactly V1–V27 in successful order. Verify clean migration and V9 → V27 upgrade/idempotency separately against disposable databases.
 - Real PKCE browser login works for two independent test accounts. Authenticated profiles work; anonymous requests, tampered JWTs and cross-account profile access are denied.
 - A uniquely named repository-owned synthetic film completes creator approval, rights declaration, private upload, caption upload, worker encoding, administrator rights review and publication. No copyrighted commercial asset or production data is used.
 - The newly processed title serves real private HLS playlists and segments. The shipped browser player decodes frames and advances playback time; downloaded bytes or an open port alone are insufficient.
@@ -60,7 +60,11 @@ Verify all of the following with actual responses and browser behavior:
 - Private source/processed buckets remain private. Caption, child-age, territory, entitlement, rights-expiry and path-traversal cases need explicit positive/negative evidence before broader security acceptance.
 - A logical backup restores into a uniquely owned scratch database and its selected row counts/migration history match. Cleanup must never drop a database that this run did not create.
 
-The development MinIO server/client now build from pinned official Go source because prior community image references were unavailable. Go downloads may redirect to `storage.googleapis.com`; a policy denial is an external prerequisite, not permission to bypass the proxy or disable verification. Assess maintained production storage separately.
+Development Compose retains the latest upstream Chainguard MinIO server/client images. Their pull requires `cgr.dev`, which is currently denied by this cloud proxy. A policy denial is an external prerequisite, not permission to bypass the proxy or disable verification. Verify exact image digests and both server/client startup; development floating tags do not establish production storage approval.
+
+## Additional client checks
+
+Run the existing TV Node tests and packaging checks. Native Android/iOS source guards do not prove a Gradle/Xcode build, signed installation, DRM or device playback. Use each client README for real compilation when the required SDK/authorized runner is available, and report unsupported platforms as NOT RUN rather than substituting source checks. Inspect the master 282-task evidence/gate audit for the remaining named tests; preserve its historical acceptance flags.
 
 ## Remaining release gates
 

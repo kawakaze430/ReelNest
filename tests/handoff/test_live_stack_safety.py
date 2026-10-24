@@ -24,6 +24,9 @@ def sandbox_script(tmp_path, name, docker):
     (tmp_path / 'scripts').mkdir()
     (tmp_path / 'bin').mkdir()
     shutil.copyfile(ROOT / 'scripts' / name, tmp_path / 'scripts' / name)
+    if name == 'test_restore_disposable.sh':
+        (tmp_path / 'scripts/advanced').mkdir()
+        shutil.copyfile(ROOT / 'scripts/advanced/recovery_objectives.py', tmp_path / 'scripts/advanced/recovery_objectives.py')
     calls = tmp_path / 'docker-calls'
     executable(tmp_path / 'bin/docker', 'printf "%s\\n" "$*" >> "$TEST_DOCKER_CALLS"\n' + docker)
     executable(tmp_path / 'bin/git', "printf '%040d\\n' 1\n")

@@ -1,6 +1,6 @@
 # Current execution and integration status
 
-GitHub `kawakaze430/ReelNest`, branch `main`, remains canonical. This pass starts from Build 28 commit `84a42f6abb3809926cae0ebce550b050f705fb76`. Local evidence records that base SHA and the modified-worktree fingerprint. It is not evidence of a successful remote workflow on the subsequently pushed commit.
+GitHub `kawakaze430/ReelNest`, branch `main`, remains canonical. This pass began on Build 28 commit `84a42f6abb3809926cae0ebce550b050f705fb76`, then safely reconciled newer upstream Build 37 `fcfd396` before pushing. New upstream rights/territory catalog eligibility, resumable uploads, advanced source features and V26/V27 migrations are preserved. Local evidence records that base SHA and the modified-worktree fingerprint. It is not evidence of a successful remote workflow on the subsequently pushed commit.
 
 ## Repairs
 
@@ -8,7 +8,7 @@ GitHub `kawakaze430/ReelNest`, branch `main`, remains canonical. This pass start
 - **Containers:** the recommendation image omitted a required semantic-search module. Python images now include their first-party module closure, verify imports and give their nonroot users readable modules. A read-only, network-disabled nonroot recommendation import/health check passed. Optional build-only CA mounts preserve TLS verification; build contexts exclude local secrets/caches.
 - **Identity/UI:** synthetic Keycloak users now have required first/last names, preserving PKCE and profile requirements. Profiles are tagged to the current identity/token, private views reset at identity/profile boundaries, and the player mounts its session effects only after identity/profile resolution. Stale requests are cancelled. Lint rules were not disabled.
 - **Browser behavior:** real tests verify two accounts' PKCE login, owned profile picker, persisted Arabic RTL/English LTR, and mounted player requests using owned profiles. Unprocessed metadata correctly returns 404. This is **not** decoded-media playback evidence.
-- **Storage:** unavailable community MinIO images are replaced with development builds from immutable official Go commits, normal TLS/checksum verification, nonroot runtimes and shared build caches. These new images have **not** completed a build here: required Go downloads redirect to denied `storage.googleapis.com`. Full G1 must verify them. Maintained production storage remains a separate decision.
+- **Storage:** the final merge preserves upstream's Chainguard MinIO images and its existing multipart integration workflow. An earlier local official-source fallback could not fetch Go dependencies and was removed in favor of the newer upstream choice. Pulling the current images is policy-denied at `cgr.dev`; full-stack server/client startup remains unverified here. Exact image digests and maintained production storage still need review.
 - **Terraform:** added the reviewed signed-provider lock, standard formatting and an explicit all-object lifecycle filter. Existing source guards tolerate formatter whitespace while retaining their security assertions. No plan/apply or cloud-account call occurred.
 
 ## Actual checks
@@ -18,17 +18,19 @@ Final commands exited 0 unless stated otherwise.
 | Check | Outcome |
 | --- | --- |
 | `cloud_evidence.py --phase g0` | PASS: Maven, frozen npm install, ESLint, TypeScript, Next.js build and Compose. Lock generation SKIPPED because the committed lock was preserved. |
-| Native Maven/JUnit | 28 collected: 24 passed, 0 failures/errors, 4 opt-in PostgreSQL cases skipped. |
+| Native Maven/JUnit after Build 37 merge | 61 collected: 56 passed, 0 failures/errors, 5 opt-in PostgreSQL/MinIO cases skipped. |
 | Dedicated PostgreSQL catalog regression | 3 passed, 0 skipped, after reproducing 3 failures before repair. |
-| Dedicated V1–V9 → V25 upgrade/idempotency test | 1 passed, 0 skipped, against a separate actual PostgreSQL 17 database. |
-| Clean API boot and strict migration verifier | Actual V1–V25 successful and ordered. |
-| Python media/ML/release/handoff/deployment suite | 248 passed; one dependency deprecation warning. |
+| Dedicated V1–V9 → V27 upgrade/idempotency test | 1 passed, 0 skipped, against a separate actual PostgreSQL 17 database. |
+| Clean API boot and strict migration verifier | Actual V1–V27 ordered history passed after the merged API applied the two preserved newer migrations. |
+| Python media/ML/release/handoff/deployment suite | 300 passed after reconciling Build 37; one dependency deprecation warning. Initial pre-merge suite: 248 passed. |
 | Offline release gate | 24/24 passed. Its 12 external production sign-offs remain unverified. |
-| Actual API smoke | 8/8 passed after catalog repair; protected unauthenticated paths denied. |
+| Actual API smoke | 8/8 passed after the initial catalog repair; post-merge real public catalog/ID/slug/alias revocation and facet checks also passed. |
 | Additional security smoke | Six protected routes returned 401. |
 | Real browser component regression | Both accounts passed identity, owned profile UI, locale persistence and denied player startup checks. |
 | Cross-account negative probe | Reviewer access to the demo profile's history returned 404. |
-| Actual logical PostgreSQL restore | Selected application-table counts/migration history matched; only this run's uniquely created scratch database was removed. |
+| Actual logical PostgreSQL restore | Passed on V27: selected counts/history matched and only the owned scratch DB was removed. New upstream RTO/backup-age proxy instrumentation is preserved; actual production RPO remains unverified. |
+| Real V27 optional-preview schema | Default OFF consent, distinct reviewer, non-billable deduplication and deletion cascade checks passed. No advertising transaction occurred. |
+| TV client tests | Node test runner passed the public catalog/origin/navigation check. Native Android/iOS compilation and hardware playback were not performed. |
 | npm production dependency audit | 0 vulnerabilities reported; this is not a license audit or security sign-off. |
 | Terraform | Formatter, backend-disabled init, readonly-lock init and provider-schema validation passed without the prior lifecycle warning. |
 | GitHub workflow static checks | Actionlint passed all three workflows; behavior tests execute the actual change selector/evidence runner. |
@@ -42,11 +44,11 @@ Reports/logs remain in ignored `build-evidence/`: `cloud-g0-latest.json`, `brows
 
 Full acceptance requires exact-source G0 proof and an isolated, uniquely named disposable project. Stages check readiness, strict migrations, browser identity, original film/caption upload, worker processing, rights review/publication, private HLS bytes, actual browser frames/time advancement, two-account/session/JWT denial and logical restore. Unique logs preserve original exit codes; credentials/signed URLs are redacted; timeout cleanup stops descendants. Artifact retention is bounded. Cleanup targets only the CI run's own volumes. CI does not rewrite source or automatically deploy/pay.
 
-**Full G1 remains NOT ACCEPTED.** MinIO's required downloads are policy-denied at `storage.googleapis.com`. Actual upload → worker → published private HLS → browser decoding has not passed here. Component proofs do not substitute for that workflow.
+**Full G1 remains NOT ACCEPTED.** The current MinIO image registry is policy-denied at `cgr.dev`. Actual upload → worker → published private HLS → browser decoding has not passed here. Component proofs do not substitute for that workflow.
 
 **Remote CI observation is BLOCKED:** `gh run list` cannot connect to `api.github.com` through the current proxy. Git fetch/push can work independently. A pushed workflow is configured to execute, not a claimed successful remote run.
 
-The cloud configuration draft preserves existing network presets, adds only `api.github.com` and `storage.googleapis.com`, and saves tested install/start instructions. Review/save those environment settings and publish to activate them; a draft save does not apply networking or publish. Retry the denied operations after activation. GitHub-hosted CI has its own network policy and may independently complete the automatic G1 job.
+The cloud configuration draft preserves existing network presets, includes the required `api.github.com` and `cgr.dev` access (and retains the earlier optional `storage.googleapis.com` request), and saves tested install/start instructions. Review/save those environment settings and publish to activate them; a draft save does not apply networking or publish. Retry the denied operations after activation. GitHub-hosted CI has its own network policy and may independently complete the automatic G1 job.
 
 G2 payment/provider verification, G3 AWS staging/CDN, G4 independent security/load/recovery/legal approval and G5 licensed territorial launch remain open. No financial transaction, deployment, DNS change or production database operation was performed. **Production readiness is not established.**
 

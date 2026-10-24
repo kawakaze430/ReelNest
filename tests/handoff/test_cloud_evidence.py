@@ -31,7 +31,7 @@ def test_pipeline_has_no_destructive_cloud_or_docker_reset_commands():
         assert banned not in source
 
 
-def test_stack_validator_checks_every_migration_v1_to_v25():
+def test_stack_validator_checks_every_tracked_migration():
     path = ROOT / 'scripts/validate_local_stack.sh'
     text = path.read_text(encoding='utf-8')
     assert 'SELECT version,success FROM flyway_schema_history ORDER BY installed_rank' in text
@@ -40,9 +40,10 @@ def test_stack_validator_checks_every_migration_v1_to_v25():
     spec = importlib.util.spec_from_file_location('verify_history', ROOT / 'scripts/verify_flyway_postgres.py')
     verifier = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(verifier)
-    rows = [(str(version), True) for version in range(1, 26)]
-    assert verifier.validate_history(rows) == 25
-    for invalid in (rows[:-1], rows + [('25', True)], [('0', True)] + rows[1:],
+    versions = verifier.expected_versions()
+    rows = [(str(version), True) for version in versions]
+    assert verifier.validate_history(rows) == len(versions)
+    for invalid in (rows[:-1], rows + [(str(versions[-1]), True)], [('0', True)] + rows[1:],
                     [('1', False)] + rows[1:], list(reversed(rows))):
         with pytest.raises(AssertionError):
             verifier.validate_history(invalid)

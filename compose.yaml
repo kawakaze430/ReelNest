@@ -62,10 +62,7 @@ services:
     volumes: ["rabbitmq_data:/var/lib/rabbitmq"]
 
   minio:
-    image: reelnest/minio-dev:9e49d5e7a648f00e26f2246f4dc28e6b07f8c84a
-    build:
-      context: ./infrastructure/minio
-      dockerfile: Dockerfile
+    image: cgr.dev/chainguard/minio:latest
     command: ["server", "/data", "--console-address", ":9001"]
     environment:
       MINIO_ROOT_USER: reelnest_dev
@@ -77,10 +74,7 @@ services:
     volumes: ["minio_data:/data"]
 
   minio-init:
-    image: reelnest/minio-mc-dev:77f82e18b5401a65958f1619df6ebb994634bd88
-    build:
-      context: ./infrastructure/minio
-      dockerfile: Dockerfile.mc
+    image: cgr.dev/chainguard/minio-client:latest-dev
     restart: "no"
     depends_on:
       minio: {condition: service_started}

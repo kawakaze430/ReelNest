@@ -16,7 +16,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 /** Restricted server-side Razorpay adapter; credentials never leave the backend. */
 @Component
-public class RazorpayGateway {
+public class RazorpayGateway implements SubscriptionPaymentProvider {
     private final String keyId, keySecret, baseUrl;
     private final ObjectMapper mapper;
     private final HttpClient client = HttpClient.newBuilder()

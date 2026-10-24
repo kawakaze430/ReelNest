@@ -3,7 +3,6 @@ package com.reelnest.catalog;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -16,36 +15,47 @@ import org.springframework.web.server.ResponseStatusException;
 @RequestMapping("/api/v1/catalog")
 public class CatalogController {
     private final TitleRepository titles;
+    private final String country;
 
-    public CatalogController(TitleRepository titles) { this.titles = titles; }
+    public CatalogController(TitleRepository titles,
+            @org.springframework.beans.factory.annotation.Value("${app.playback.trusted-country:IN}") String country) {
+        this.titles = titles;
+        if(country==null || !country.matches("[A-Z]{2}"))
+            throw new IllegalArgumentException("Invalid public catalog territory");
+        this.country=country;
+    }
 
     @GetMapping
     public Page<TitleResponse> list(
         @RequestParam(required = false) String genre,
         @RequestParam(required = false) String language,
         @RequestParam(required = false, name = "q") String query,
+        @RequestParam(required = false, name = "type") String contentType,
         @RequestParam(defaultValue = "0") int page,
         @RequestParam(defaultValue = "12") int size
     ) {
         if (page < 0 || size < 1 || size > 48) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "page must be >= 0; size must be 1-48");
         }
-        return titles.search(normalize(genre), normalize(language), normalize(query),
-            PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "featured", "createdAt")))
-            .map(TitleResponse::from);
+        String term=normalize(query);
+        if(contentType!=null && !contentType.equals("MOVIE") && !contentType.equals("SERIES"))
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Invalid content type");
+        return titles.searchPublic(normalize(genre), normalize(language),
+            term==null?null:SearchTextPolicy.likeLiteral(term),contentType,country,
+            PageRequest.of(page,size)).map(TitleResponse::from);
     }
 
     @GetMapping("/by-slug/{slug}")
     public TitleResponse bySlug(@PathVariable String slug){
         if(slug.length()>255 || !slug.matches("[a-z0-9][a-z0-9-]*"))
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Invalid slug");
-        return titles.findBySlugAndStatus(slug,"PUBLISHED").map(TitleResponse::from)
+        return titles.findPublicBySlug(slug,country).map(TitleResponse::from)
             .orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND,"Title not found"));
     }
 
     @GetMapping("/{id}")
     public TitleResponse get(@PathVariable UUID id) {
-        return titles.findByIdAndStatus(id, "PUBLISHED")
+        return titles.findPublicById(id,country)
             .map(TitleResponse::from)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Title not found"));
     }

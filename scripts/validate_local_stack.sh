@@ -93,7 +93,7 @@ wait_for_services() {
 }
 verify_migrations() {
  # Strictly validate ordered, successful history rows, including rejecting
- # unexpected baselines/duplicates (a COUNT(DISTINCT version)=25 alone cannot).
+ # unexpected baselines/duplicates (a COUNT(DISTINCT version)=27 alone cannot).
  docker compose exec -T postgres psql -v ON_ERROR_STOP=1 -U reelnest -d reelnest -AtF '|' -c \
    'SELECT version,success FROM flyway_schema_history ORDER BY installed_rank' | \
  python3 -c 'import sys;from scripts.verify_flyway_postgres import validate_history;rows=[(v,s=="t") for v,s in (line.rstrip("\n").split("|") for line in sys.stdin)];print("PASS actual ordered Flyway migrations:",validate_history(rows))'
@@ -103,7 +103,7 @@ run_step 'Docker Compose configuration' docker compose config -q
 run_step 'service image build and startup' docker compose up --build -d
 run_step 'API, web, Keycloak and ML readiness' wait_for_services
 run_step 'non-root media worker imports' docker compose exec -T video-worker python -c 'import worker, pipeline, caption_packaging, timed_text, audio_packaging, preview_artwork'
-run_step 'ordered Flyway V1-V25 history' verify_migrations
+run_step 'ordered Flyway V1-V27 history' verify_migrations
 run_step 'read-only API smoke' python3 scripts/live_smoke.py --output build-evidence/live-smoke-latest.json
 run_step 'unauthenticated security smoke' bash scripts/security_smoke_live.sh
 if [[ "$MODE" == --full ]]; then

@@ -26,7 +26,11 @@ public class RequestSecurityHeaders extends OncePerRequestFilter {
         response.setHeader("Permissions-Policy","camera=(), microphone=(), geolocation=()");
         String path=request.getRequestURI();
         if (path.startsWith("/api/v1/privacy") || path.startsWith("/api/v1/billing")
-            || path.startsWith("/api/v1/me") || path.startsWith("/api/v1/profiles"))
+            || path.startsWith("/api/v1/me") || path.startsWith("/api/v1/profiles")
+            // Revocation-sensitive public catalog/recommendation responses must
+            // not survive on shared caches after rights or account changes.
+            || path.startsWith("/api/v1/catalog") || path.startsWith("/api/v1/discovery")
+            || path.startsWith("/api/v1/avod"))
             response.setHeader("Cache-Control","no-store");
         try { chain.doFilter(request,response); }
         finally { MDC.remove("requestId"); }

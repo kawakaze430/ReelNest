@@ -19,11 +19,11 @@ import org.springframework.web.server.ResponseStatusException;
 public class BillingService {
     private final JdbcTemplate jdbc;
     private final CurrentUserService current;
-    private final RazorpayGateway provider;
+    private final SubscriptionPaymentProvider provider;
     private final ObjectMapper mapper;
     private final String webhookSecret, standardPlan, premiumPlan;
 
-    public BillingService(JdbcTemplate jdbc, CurrentUserService current,RazorpayGateway provider,ObjectMapper mapper,
+    public BillingService(JdbcTemplate jdbc, CurrentUserService current,SubscriptionPaymentProvider provider,ObjectMapper mapper,
             @Value("${app.billing.razorpay.webhook-secret:}") String webhookSecret,
             @Value("${app.billing.razorpay.standard-plan-id:}") String standardPlan,
             @Value("${app.billing.razorpay.premium-plan-id:}") String premiumPlan) {

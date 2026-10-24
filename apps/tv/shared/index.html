@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src __REELNEST_CONNECT_ORIGIN__; img-src 'self' data:; script-src 'self'; style-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'"/>
+  <title>ReelNest TV • Catalog</title>
+  <link rel="stylesheet" href="tv.css"/>
+</head>
+<body>
+  <main>
+    <header><h1>ReelNest TV</h1><p>Browse the licensed catalog · Preview client</p></header>
+    <p id="status" role="status" aria-live="polite">Starting...</p>
+    <section aria-label="Available titles"><div id="titles" class="grid"></div></section>
+    <section id="detail" aria-label="Selected title" hidden><h2 id="detail-title"></h2>
+      <p id="detail-description"></p>
+      <p id="detail-note">Protected video playback requires separate signed-in device authentication and DRM certification. This demo does not start streams.</p>
+      <button type="button" id="close-detail">Return to catalog</button>
+    </section>
+  </main>
+  <script src="config.js"></script>
+  <script src="tv.js"></script>
+</body>
+</html>

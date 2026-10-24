@@ -12,6 +12,7 @@ import {
 import type Hls from 'hls.js';
 import { apiFetch, API_BASE_URL, ApiError } from '@/lib/api';
 import { ProfilePicker } from '@/components/profile-picker';
+import { SceneExplorer } from '@/components/scene-explorer';
 import { useActiveProfile } from '@/hooks/use-active-profile';
 import { prettyTime, playbackMessage, type PlaybackSession } from '@/lib/playback';
 import { boundedElapsedMs, hlsRecoveryAction, skipAction, telemetryErrorCode } from '@/lib/playback-enhancements';
@@ -24,6 +25,8 @@ import {
 } from '@/lib/player-preferences';
 
 type Quality = { level: number; label: string; height: number };
+type NativeAirPlayVideo = HTMLVideoElement & {webkitShowPlaybackTargetPicker?:()=>void};
+type PlaybackTargetEvent = Event & {availability?:string};
 const LANGUAGE_NAMES: Record<string,string> = { en:'English',hi:'Hindi',es:'Spanish',fr:'French',de:'German',ta:'Tamil',te:'Telugu',eng:'English',hin:'Hindi',spa:'Spanish',fra:'French',tam:'Tamil',tel:'Telugu' };
 function trackLabel(language:string, label:string):string {
   const name=LANGUAGE_NAMES[language.toLowerCase()]||language;
@@ -91,6 +94,7 @@ function AuthorizedPlayer({titleId,profileId,token,onRetry}:{titleId:string;prof
   const [fullscreen,setFullscreen] = useState(false);
   const [pip,setPip] = useState(false);
   const [pipAvailable,setPipAvailable] = useState(false);
+  const [airplayAvailable,setAirplayAvailable] = useState(false);
   const [qualities,setQualities] = useState<Quality[]>([]);
   const [selectedQuality,setSelectedQuality] = useState(-1);
   const [activeQuality,setActiveQuality] = useState('Auto');
@@ -540,6 +544,20 @@ function AuthorizedPlayer({titleId,profileId,token,onRetry}:{titleId:string;prof
     if(v)v.muted=!v.muted;
   }
   const nativeHls=mode==='Authorized native HLS';
+  const showAirplay=airplayAvailable&&ready&&Boolean(session)&&nativeHls;
+  useEffect(()=>{
+    const video=videoRef.current as NativeAirPlayVideo|null;
+    // Only Safari native HLS can expose an OS-owned AirPlay route chooser.
+    // Never hand off API bearer tokens or a raw private media URL.
+    if(!video || !ready || !session || !nativeHls ||
+        typeof video.webkitShowPlaybackTargetPicker!=='function')return;
+    const update=(event:Event)=>{
+      const availability=(event as PlaybackTargetEvent).availability;
+      setAirplayAvailable(availability==='available');
+    };
+    video.addEventListener('webkitplaybacktargetavailabilitychanged',update);
+    return()=>{video.removeEventListener('webkitplaybacktargetavailabilitychanged',update);};
+  },[ready,session,nativeHls]);
   const activeCue=skipAction(session?.cues,position,session?.durationSeconds??0);
   useEffect(()=>{
     const onFull=()=>setFullscreen(Boolean(document.fullscreenElement));
@@ -587,6 +605,13 @@ function AuthorizedPlayer({titleId,profileId,token,onRetry}:{titleId:string;prof
         onVolumeChange={e=>{setMuted(e.currentTarget.muted);setVolume(e.currentTarget.volume);}}
         onError={()=>setError('The browser could not decode the stream. Retry the playback session or select another supported device.')}
         tabIndex={0} aria-label="Private OTT video player. Space play/pause; arrows seek; M mute; F fullscreen; C captions." />
+      {session?.visibleWatermarkRequired&&ready&&<span className="viewer-visible-watermark" aria-hidden="true"
+        style={Math.floor(position/30)%4===0?{top:'19%',left:'10%'}:
+               Math.floor(position/30)%4===1?{top:'22%',right:'12%'}:
+               Math.floor(position/30)%4===2?{bottom:'24%',right:'15%'}:
+               {bottom:'22%',left:'12%'}}>
+        ReelNest · {session.sessionId.slice(0,8).toUpperCase()}
+      </span>}
     </div>
     {session&&<div className="viewer-seek-area">
       <label htmlFor="viewer-seek">Seek position: {prettyTime(position)} of {prettyTime(session.durationSeconds)}</label>
@@ -620,6 +645,13 @@ function AuthorizedPlayer({titleId,profileId,token,onRetry}:{titleId:string;prof
       <label className="viewer-volume">Volume <input type="range" aria-label="Volume" min={0} max={1} step={0.05} value={volume} onChange={e=>{const v=videoRef.current;if(v){v.volume=Number(e.target.value);v.muted=false;}}}/></label>
       <button type="button" disabled={!session || !ready} onClick={()=>void toggleFullscreen()} aria-label={fullscreen?'Exit fullscreen':'Enter fullscreen'}>{fullscreen?<Minimize size={17}/>:<Maximize size={17}/>}<span>Fullscreen</span></button>
       {pipAvailable&&<button type="button" disabled={!session || !ready} onClick={()=>void togglePiP()} aria-label={pip?'Exit picture in picture':'Enter picture in picture'}><PictureInPicture2 size={17}/><span>{pip?'Exit PiP':'PiP'}</span></button>}
+      {showAirplay&&<button type="button" disabled={!session||!ready||!nativeHls}
+        aria-label="Choose AirPlay device" onClick={()=>{
+          const v=videoRef.current as NativeAirPlayVideo|null;
+          if(!ready||!session||!nativeHls||!v?.webkitShowPlaybackTargetPicker)return;
+          try{v.webkitShowPlaybackTargetPicker();}
+          catch{setError('AirPlay is unavailable or not permitted for this protected stream.');}
+        }}>AirPlay</button>}
     </div>
     <div className="viewer-meta">
       <div className="viewer-mode" aria-live="polite"><ShieldCheck size={18}/><span>{mode}</span>{session&&<span className="viewer-position"><Clock3 size={16}/> {prettyTime(position)} / {prettyTime(session.durationSeconds)}</span>}</div>
@@ -638,6 +670,11 @@ function AuthorizedPlayer({titleId,profileId,token,onRetry}:{titleId:string;prof
       <label className="viewer-consent"><input type="checkbox" checked={prefs.qoeConsent} onChange={e=>changePrefs({qoeConsent:e.target.checked})}/>
         Share optional playback quality metrics linked to this viewer profile (off by default)</label>
     </div>
+    {session&&token&&profileId&&<SceneExplorer
+      token={token} titleId={titleId} profileId={profileId}
+      duration={session.durationSeconds} canSeek={ready}
+      onSeek={seconds=>{const v=videoRef.current;if(v&&ready&&Number.isFinite(v.duration))
+        v.currentTime=Math.max(0,Math.min(seconds,Math.max(0,v.duration-1)));}}/>}
     {networkRecovery&&<p className="viewer-support-note" role="status" aria-live="polite">{networkRecovery}</p>}
     {nativeHls&&<p className="viewer-support-note">Safari native HLS manages adaptive quality internally. Manual quality control is unavailable here. Audio language selection uses native track controls only when Safari exposes them; captions are available when the stream provides them. Data saver does not cap native playback.</p>}
     {(!audioTracks.length || !subtitleTracks.length)&&<p className="viewer-support-note">Audio and subtitle choices appear only when the licensed HLS package includes alternate tracks. Preferences are stored on this device and synchronized to your signed-in profile when the API is available.</p>}

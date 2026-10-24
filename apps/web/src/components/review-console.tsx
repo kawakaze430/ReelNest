@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { CheckCircle2, ClipboardCheck, LoaderCircle, RefreshCcw, Shield, XCircle } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import { MediaCueEditor } from '@/components/media-cue-editor';
+import { SceneMarkerEditor } from '@/components/scene-marker-editor';
 import type { Creator, ReviewTitle, Rights, MediaJob } from '@/types/creator';
 
 export function ReviewConsole() {
@@ -99,7 +100,8 @@ function AccountReviewConsole({auth}:{auth:ReturnType<typeof useAuth>}) {
           <p><strong>{m.processing_status}</strong> · {m.job_state||'WAITING'} · {m.attempts??0} / {m.max_attempts??3} attempts
           {m.last_error&&<span> · {m.last_error}</span>}</p>
           {m.processing_status==='READY' && m.duration_seconds !== null && m.duration_seconds>0 && token &&
-            <MediaCueEditor titleId={t.id} assetId={m.id} duration={m.duration_seconds} token={token}/>}
+            <><MediaCueEditor titleId={t.id} assetId={m.id} duration={m.duration_seconds} token={token}/>
+            <SceneMarkerEditor titleId={t.id} assetId={m.id} duration={m.duration_seconds} token={token}/></>}
           {m.job_state==='FAILED'&&<button className="btn btn-outline" disabled={loading} onClick={()=>void act(`/api/v1/admin/titles/${t.id}/media/${m.id}/retry`,{},'Media re-queued for processing.')}>Retry transient failure</button>}
         </div>)}</div>}
         {rights[t.id]&&<div className="rights-summary"><p><strong>{rights[t.id].rightsBasis}</strong> · {rights[t.id].validFrom} to {rights[t.id].validUntil}</p><p>Territories: {rights[t.id].territories.join(', ')}</p><p>Evidence: {rights[t.id].proofReference}</p><p>{rights[t.id].agreementNotes}</p>

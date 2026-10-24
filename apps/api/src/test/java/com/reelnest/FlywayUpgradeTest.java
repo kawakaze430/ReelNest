@@ -19,7 +19,7 @@ class FlywayUpgradeTest {
     @TempDir Path legacyDirectory;
 
     @Test
-    void upgradesVersionNineToTwentyFiveInPostgres() throws Exception {
+    void upgradesVersionNineToTwentySixInPostgres() throws Exception {
         String url=System.getenv("REELNEST_UPGRADE_DB_URL");
         assumeTrue(url!=null && url.startsWith("jdbc:postgresql://127.0.0.1:5432/reelnest_upgrade")
             && "true".equals(System.getenv("REELNEST_DISPOSABLE_DB")),
@@ -44,7 +44,7 @@ class FlywayUpgradeTest {
 
         Flyway upgrade=Flyway.configure().dataSource(url,user,password)
             .locations("classpath:db/migration").load();
-        assertEquals(16,upgrade.migrate().migrationsExecuted,"Migrate existing V9 to V25");
+        assertEquals(18,upgrade.migrate().migrationsExecuted,"Migrate existing V9 to V27");
         List<Integer> applied=new ArrayList<>();
         try(var conn=DriverManager.getConnection(url,user,password);
             var statement=conn.createStatement();
@@ -55,7 +55,7 @@ class FlywayUpgradeTest {
                 applied.add(Integer.parseInt(result.getString("version")));
             }
         }
-        assertEquals(java.util.stream.IntStream.rangeClosed(1,25).boxed().toList(),applied);
+        assertEquals(java.util.stream.IntStream.rangeClosed(1,27).boxed().toList(),applied);
         assertEquals(0,upgrade.migrate().migrationsExecuted,"Upgrade must be idempotent");
     }
 }

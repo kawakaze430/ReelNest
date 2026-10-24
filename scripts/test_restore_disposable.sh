@@ -42,6 +42,11 @@ PY
 trap cleanup EXIT
 # Archives are private temporary files and are always removed, including failures.
 docker compose exec -T postgres pg_dump -U reelnest -Fc reelnest > "$backup_archive"
+BACKUP_COMPLETED_UTC=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+# Record a simulated incident only after the backup. This is not a write
+# watermark and must not be interpreted as zero transaction data loss.
+INCIDENT_UTC=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+RESTORE_STARTED_UTC=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 docker compose exec -T postgres createdb -U reelnest "$scratch_db"
 scratch_created=true
 docker compose exec -T postgres pg_restore -U reelnest --exit-on-error --no-owner -d "$scratch_db" < "$backup_archive"
@@ -50,5 +55,10 @@ for table in flyway_schema_history users titles profiles privacy_requests; do
  restored_count=$(docker compose exec -T postgres psql -v ON_ERROR_STOP=1 -U reelnest -d "$scratch_db" -Atqc "SELECT COUNT(*) FROM $table")
  [[ "$source_count" == "$restored_count" ]] || { echo "Restore row-count mismatch in $table" >&2; exit 1; }
 done
+RESTORE_VERIFIED_UTC=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+python3 scripts/advanced/recovery_objectives.py \
+ --backup-completed "$BACKUP_COMPLETED_UTC" --incident "$INCIDENT_UTC" \
+ --restore-started "$RESTORE_STARTED_UTC" --restore-verified "$RESTORE_VERIFIED_UTC" \
+ --output build-evidence/recovery-objectives.local.json
 restore_verified=true
 printf 'PASS isolated logical restore: migrated schema and selected row counts match\n'

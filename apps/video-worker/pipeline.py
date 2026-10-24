@@ -28,18 +28,22 @@ class MediaInfo:
     duration: float
     has_audio: bool
     video_codec: str
+    hdr: bool = False
 
 
 # Conservative VOD preset, no upscale. Target rates in bits/s.
 LADDER = ((360, 640, 650_000, 96_000), (480, 854, 1_100_000, 128_000),
           (720, 1280, 2_500_000, 128_000), (1080, 1920, 5_000_000, 192_000))
+# Experimental: 4K SDR H.264 only; excluded by default to avoid expensive
+# encoding and incompatible playback. HEVC/AV1/HDR/HDCP require separate policy.
+LADDER_4K_SDR = (2160, 3840, 15_000_000, 192_000)
 
 
 def probe(path: Path, *, max_duration: int = 14_400, timeout: int = 30) -> MediaInfo:
     try:
         result = subprocess.run([
             "ffprobe", "-v", "error", "-protocol_whitelist", "file,pipe,crypto,data", "-show_entries",
-            "format=duration,format_name:stream=index,codec_type,codec_name,width,height",
+            "format=duration,format_name:stream=index,codec_type,codec_name,width,height,color_transfer,color_primaries",
             "-of", "json", str(path)
         ], check=True, capture_output=True, text=True, timeout=timeout)
         data = json.loads(result.stdout)
@@ -68,13 +72,25 @@ def probe(path: Path, *, max_duration: int = 14_400, timeout: int = 30) -> Media
         raise InvalidMedia("Video dimensions exceed policy limits")
     if len(streams) > 24:
         raise InvalidMedia("Too many tracks")
+    transfer = str(video.get("color_transfer") or "").lower()
+    primaries = str(video.get("color_primaries") or "").lower()
+    hdr = transfer in {"smpte2084", "arib-std-b67"} or primaries=="bt2020"
+    if hdr:
+        # Current encoder emits 8-bit BT.709-like H.264 without color
+        # conversion; refusing HDR is safer than silently crushing highlights.
+        raise InvalidMedia("HDR requires a licensed tone-map or HDR encoding pipeline")
     return MediaInfo(width, height, duration,
                      any(s.get("codec_type") == "audio" for s in streams),
-                     video.get("codec_name", "unknown"))
+                     video.get("codec_name", "unknown"),False)
 
 
 def _renditions(info: MediaInfo) -> list[tuple[int, int, int, int]]:
+    if info.hdr:
+        raise InvalidMedia("HDR renditions are disabled until mastered and certified")
     variants = [r for r in LADDER if info.height >= r[0] and info.width >= int(r[1] * .85)]
+    if (os.getenv("REELNEST_ENABLE_4K_SDR_H264","false").lower()=="true"
+        and info.height >= 2160 and info.width >= 3840):
+        variants.append(LADDER_4K_SDR)
     # Small sources are never upscaled; encode a dimension-preserving 360p-like track.
     if not variants:
         even_height = max(2, info.height // 2 * 2)

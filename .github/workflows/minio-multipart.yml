@@ -1,0 +1,47 @@
+name: Disposable MinIO multipart resume integration
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'apps/api/src/main/java/com/reelnest/uploads/**'
+      - 'apps/api/src/test/java/com/reelnest/uploads/**'
+      - '.github/workflows/minio-multipart.yml'
+permissions:
+  contents: read
+jobs:
+  minio-resume:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      REELNEST_DISPOSABLE_MINIO: 'true'
+      MINIO_TEST_ENDPOINT: http://127.0.0.1:9000
+      MINIO_TEST_ACCESS_KEY: reelnest_ephemeral_only
+      MINIO_TEST_SECRET_KEY: reelnest_ephemeral_unsafe_test_only_123
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+          cache-dependency-path: apps/api/pom.xml
+      - name: Start isolated loopback-only MinIO
+        run: |
+          set -Eeuo pipefail
+          docker run -d --rm --name reelnest-multipart-ci \
+            -p 127.0.0.1:9000:9000 \
+            -e MINIO_ROOT_USER="$MINIO_TEST_ACCESS_KEY" \
+            -e MINIO_ROOT_PASSWORD="$MINIO_TEST_SECRET_KEY" \
+            cgr.dev/chainguard/minio:latest server /data --address ':9000'
+          ready=0
+          for n in $(seq 1 45); do
+            if curl --fail --silent http://127.0.0.1:9000/minio/health/live > /dev/null; then ready=1; break; fi
+            sleep 2
+          done
+          if [ "$ready" -ne 1 ]; then docker logs reelnest-multipart-ci; exit 1; fi
+      - name: Test real interrupted multipart resume and cancellation
+        working-directory: apps/api
+        run: mvn --batch-mode --no-transfer-progress -Dtest=MinioMultipartResumeIntegrationTest test
+      - name: Destroy disposable MinIO regardless of result
+        if: always()
+        run: docker rm -f reelnest-multipart-ci >/dev/null 2>&1 || true
