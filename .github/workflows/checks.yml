@@ -107,6 +107,8 @@ jobs:
         run: npm ci --no-audit --no-fund
       - name: Run human subtitle translation QA regression
         run: node scripts/test_build32_translation.mjs
+      - name: Verify achievements/billing source contracts and Build 33 ledger
+        run: python3 -m pytest tests/release/test_build33_status.py -q
       - name: Verify new scene guards and 282 task preservation
         run: python3 -m pytest tests/release/test_build32_scenes.py tests/release/test_build32_status.py -q
       - name: Run all offline release gates
