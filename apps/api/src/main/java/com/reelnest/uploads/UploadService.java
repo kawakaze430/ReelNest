@@ -81,7 +81,10 @@ public class UploadService {
         var creator = creators.requireApproved(jwt);
         ensureDraft(titleId, creator.getId());
         String ext = UploadValidation.extension(input.filename(), input.contentType(), input.sizeBytes());
-        if (jdbc.queryForObject("SELECT COUNT(*) FROM upload_intents WHERE title_id=? AND status IN ('INITIATED','COMPLETING')", Long.class, titleId) > 0)
+        if (jdbc.queryForObject("""
+            SELECT COUNT(*) FROM upload_intents WHERE title_id=?
+            AND ((status='INITIATED' AND expires_at>NOW()) OR status='COMPLETING')
+            """, Long.class, titleId) > 0)
             throw new ResponseStatusException(HttpStatus.CONFLICT, "A multipart upload is already active for this title");
         Long pendingMedia = jdbc.queryForObject("""
             SELECT COUNT(*) FROM media_assets WHERE title_id=?
