@@ -37,7 +37,7 @@ public class SceneMarkerController {
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional(readOnly=true)
     public List<Scene> adminList(@PathVariable UUID titleId,@PathVariable UUID assetId) {
-        readyDuration(titleId,assetId);
+        readyDuration(titleId,assetId,false);
         return readScenes(assetId);
     }
 
@@ -46,7 +46,7 @@ public class SceneMarkerController {
     @Transactional
     public List<Scene> replace(@AuthenticationPrincipal Jwt jwt,@PathVariable UUID titleId,
                                @PathVariable UUID assetId,@Valid @RequestBody SceneUpdate update) {
-        var duration=readyDuration(titleId,assetId);
+        var duration=readyDuration(titleId,assetId,true);
         var entries=SceneMarkerPolicy.validate(update.scenes(),duration);
         // The DB transaction makes replacement atomic: never expose half an editorial update.
         jdbc.update("DELETE FROM media_scene_markers WHERE media_asset_id=?",assetId);
@@ -91,12 +91,11 @@ public class SceneMarkerController {
         return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(scenes);
     }
 
-    private int readyDuration(UUID titleId,UUID assetId) {
+    private int readyDuration(UUID titleId,UUID assetId,boolean lock) {
         Integer duration=jdbc.query("""
             SELECT duration_seconds FROM media_assets
             WHERE id=? AND title_id=? AND processing_status='READY'
-            FOR UPDATE
-            """,rs->rs.next()?(Integer)rs.getObject(1):null,assetId,titleId);
+            """+(lock?" FOR UPDATE":""),rs->rs.next()?(Integer)rs.getObject(1):null,assetId,titleId);
         if(duration==null || duration<1)
             throw new ResponseStatusException(HttpStatus.NOT_FOUND,"READY media asset not found");
         return duration;

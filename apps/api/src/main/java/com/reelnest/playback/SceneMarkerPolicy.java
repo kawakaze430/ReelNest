@@ -25,7 +25,7 @@ public final class SceneMarkerPolicy {
         if(s==null || s.length()>max || s.strip().length()<min) return true;
         for(int i=0;i<s.length();i++) {
             char c=s.charAt(i);
-            if(c=='<' || c=='>' || c=='\u0000' || Character.isISOControl(c)) return true;
+            if(c=='<' || c=='>' || c==0 || Character.isISOControl(c)) return true;
         }
         return false;
     }

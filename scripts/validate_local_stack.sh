@@ -38,7 +38,47 @@ printf 'Confirming media-worker modules inside the running non-root container...
 docker compose exec -T video-worker python -c 'import worker, pipeline, caption_packaging, timed_text, audio_packaging, preview_artwork'
 printf 'Checking Flyway migrations...\n'
 docker compose exec -T postgres psql -U reelnest -d reelnest -Atqc \
- "SELECT CASE WHEN COUNT(DISTINCT version) FILTER (WHERE success AND version ~ '^([1-9]|1[0-9]|2[0-6]) AND COUNT(*) FILTER (WHERE NOT success)=0 THEN 'PASS' ELSE 'FAIL' END FROM flyway_schema_history" | grep '^PASS$'
+ "SELECT CASE WHEN COUNT(DISTINCT version) FILTER (WHERE success AND version ~ '^([1-9]|1[0-9]|2[0-6])
+printf 'Checking API smoke tests...\n'
+python3 scripts/live_smoke.py
+bash scripts/security_smoke_live.sh
+if [[ "$MODE" == --full ]]; then
+ echo 'Running original-asset ingestion-to-playback E2E. Use a clean dev DB for fixture assumptions.'
+ python3 scripts/e2e_processing_live.py
+ python3 scripts/e2e_playback_live.py
+fi
+printf 'PASS local %s validation; logs: %s\n' "$MODE" "$log"
+)=26 AND COUNT(*) FILTER (WHERE NOT success)=0 THEN 'PASS' ELSE 'FAIL' END FROM flyway_schema_history" | grep '^PASS$'
+printf 'Checking API smoke tests...\n'
+python3 scripts/live_smoke.py
+bash scripts/security_smoke_live.sh
+if [[ "$MODE" == --full ]]; then
+ echo 'Running original-asset ingestion-to-playback E2E. Use a clean dev DB for fixture assumptions.'
+ python3 scripts/e2e_processing_live.py
+ python3 scripts/e2e_playback_live.py
+fi
+printf 'PASS local %s validation; logs: %s\n' "$MODE" "$log"
+)=26 AND COUNT(*) FILTER (WHERE NOT success)=0 THEN 'PASS' ELSE 'FAIL' END FROM flyway_schema_history" | grep '^PASS
+printf 'Checking API smoke tests...\n'
+python3 scripts/live_smoke.py
+bash scripts/security_smoke_live.sh
+if [[ "$MODE" == --full ]]; then
+ echo 'Running original-asset ingestion-to-playback E2E. Use a clean dev DB for fixture assumptions.'
+ python3 scripts/e2e_processing_live.py
+ python3 scripts/e2e_playback_live.py
+fi
+printf 'PASS local %s validation; logs: %s\n' "$MODE" "$log"
+)=26 AND COUNT(*) FILTER (WHERE NOT success)=0 THEN 'PASS' ELSE 'FAIL' END FROM flyway_schema_history" | grep '^PASS$'
+printf 'Checking API smoke tests...\n'
+python3 scripts/live_smoke.py
+bash scripts/security_smoke_live.sh
+if [[ "$MODE" == --full ]]; then
+ echo 'Running original-asset ingestion-to-playback E2E. Use a clean dev DB for fixture assumptions.'
+ python3 scripts/e2e_processing_live.py
+ python3 scripts/e2e_playback_live.py
+fi
+printf 'PASS local %s validation; logs: %s\n' "$MODE" "$log"
+
 printf 'Checking API smoke tests...\n'
 python3 scripts/live_smoke.py
 bash scripts/security_smoke_live.sh

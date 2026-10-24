@@ -10,11 +10,11 @@ spec.loader.exec_module(module)
 
 
 def test_exact_v1_to_v26_local_migrations():
-    assert module.expected_versions() == list(range(1, 26))
+    assert module.expected_versions() == list(range(1, 27))
 
 
 def test_migration_history_rejects_gaps_failed_baselines_and_extras():
-    good = [(str(n), True) for n in range(1, 26)]
+    good = [(str(n), True) for n in range(1, 27)]
     assert module.validate_history(good) == 26
     invalid = [
         good[:-1], good + [("27", True)], good[1:] + good[:1],
