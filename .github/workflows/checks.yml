@@ -109,6 +109,8 @@ jobs:
         run: node scripts/test_build32_translation.mjs
       - name: Check native catalog source package contracts
         run: python3 -m pytest tests/release/test_build34_mobile_preview.py -q
+      - name: Verify Build37 watermark/live preview contracts and task preservation
+        run: python3 -m pytest tests/release/test_build37_status.py -q
       - name: Verify Build36 contextual AVOD preview and native privacy guards
         run: python3 -m pytest tests/release/test_build36_contracts.py tests/release/test_build36_mobile_source.py -q
       - name: Verify public catalog rights source and all 142 partial task evidence
