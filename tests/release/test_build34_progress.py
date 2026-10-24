@@ -20,11 +20,11 @@ def test_all_prior_evidence_preserved_and_no_production_acceptance():
         for k,v in old.items():
             assert new[k]==v,(old["task_id"],k)
 
-def test_only_seven_new_tasks_have_partial_implementations():
+def test_only_eight_new_tasks_have_partial_implementations():
     old={r["task_id"]:r for r in load("BUILD33_282_TASKS.csv")}
     new={r["task_id"]:r for r in load("BUILD34_282_TASKS.csv")}
     promoted={key for key in old if old[key]["build33_status"]!=new[key]["build34_status"]}
-    assert promoted=={"D-13","E-17","M-02","M-03","M-09","M-10","M-12"}
+    assert promoted=={"D-13","E-17","G-10","M-02","M-03","M-09","M-10","M-12"}
     for key in promoted:
         assert old[key]["build33_status"]=="Not started / no audited implementation evidence"
         assert new[key]["build34_status"]=="Partially implemented"
@@ -32,10 +32,10 @@ def test_only_seven_new_tasks_have_partial_implementations():
     assert dict(Counter(r["build34_status"] for r in new.values()))=={
         "Component CI verified — production acceptance pending":5,
         "Source implemented — runtime unverified":67,
-        "Partially implemented":141,
+        "Partially implemented":142,
         "Blocked — external execution / operator verification":31,
         "Blocked — external approval / account":17,
-        "Not started / no audited implementation evidence":21
+        "Not started / no audited implementation evidence":20
     }
 
 def test_secure_one_use_handoff_has_no_session_transfer():
