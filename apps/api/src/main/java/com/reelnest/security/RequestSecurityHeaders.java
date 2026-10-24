@@ -29,7 +29,8 @@ public class RequestSecurityHeaders extends OncePerRequestFilter {
             || path.startsWith("/api/v1/me") || path.startsWith("/api/v1/profiles")
             // Revocation-sensitive public catalog/recommendation responses must
             // not survive on shared caches after rights or account changes.
-            || path.startsWith("/api/v1/catalog") || path.startsWith("/api/v1/discovery"))
+            || path.startsWith("/api/v1/catalog") || path.startsWith("/api/v1/discovery")
+            || path.startsWith("/api/v1/avod"))
             response.setHeader("Cache-Control","no-store");
         try { chain.doFilter(request,response); }
         finally { MDC.remove("requestId"); }

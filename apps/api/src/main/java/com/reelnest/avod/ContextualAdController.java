@@ -160,6 +160,13 @@ public class ContextualAdController {
         "Untrusted client preview signal. Never bill advertisers or infer a payable impression."));
   }
 
+  private void audit(UUID actor,String action,UUID id){
+    db.update("""
+       INSERT INTO audit_logs(id,actor_user_id,action,entity_type,entity_id,detail)
+       VALUES(?,?,?,'avod_preview_creative',?,NULL)
+       """,UUID.randomUUID(),actor,action,id);
+  }
+
   @PostMapping("/admin/creatives")
   @PreAuthorize("hasRole('ADMIN')")
   @Transactional
@@ -179,6 +186,7 @@ public class ContextualAdController {
       VALUES(?,?,?,?,?,?,?,?)
       """,id,input.advertiser().strip(),input.message().strip(),input.genre(),input.countryCode(),
       input.startsAt(),input.endsAt(),user(jwt));
+    audit(user(jwt),"AVOD_DRAFT_CREATED",id);
     return id;
   }
   @PostMapping("/admin/creatives/{id}/review")
@@ -192,12 +200,14 @@ public class ContextualAdController {
       """,actor,id,actor);
     if(count!=1)throw new ResponseStatusException(HttpStatus.CONFLICT,
        "Second administrator required; review only unexpired draft previews");
+    audit(actor,"AVOD_REVIEWED",id);
   }
   @PostMapping("/admin/creatives/{id}/archive")
   @PreAuthorize("hasRole('ADMIN')")
   @Transactional
-  public void archive(@PathVariable UUID id){
+  public void archive(@AuthenticationPrincipal Jwt jwt,@PathVariable UUID id){
     if(db.update("UPDATE avod_creatives SET status='ARCHIVED' WHERE id=? AND status<>'ARCHIVED'",id)!=1)
       throw new ResponseStatusException(HttpStatus.NOT_FOUND,"Creative not active");
+    audit(user(jwt),"AVOD_ARCHIVED",id);
   }
 }
