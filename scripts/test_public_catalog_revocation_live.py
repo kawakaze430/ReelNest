@@ -87,6 +87,15 @@ def main():
             conn.execute("INSERT INTO title_search_aliases(title_id,language,alias) VALUES(%s,'en',%s)",(title,alias))
             assert visible(),"Licensed READY title is absent from public browse"
             specific(200)
+            # Query facets must be combined, not silently ignored or widened.
+            for filters,expected in [
+                ("genre=Drama&language=en",True),
+                ("genre=Drama&language=hi",False),
+                ("genre=Sci-Fi&language=en",False)
+            ]:
+                status,filtered=get_json(baseline+"?q="+quote(name)+"&"+filters)
+                assert status==200
+                assert any(x["id"]==str(title) for x in filtered["content"])==expected,filters
             # The main catalog search must match reviewed aliases, not only /suggest.
             status,matching=get_json(baseline+"?q="+quote(alias)+"&size=20")
             assert status==200 and any(x["id"]==str(title) for x in matching["content"]),(
