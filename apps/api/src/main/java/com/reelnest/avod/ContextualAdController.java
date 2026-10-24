@@ -122,6 +122,23 @@ public class ContextualAdController {
     List<Creative> preview=info==null?List.of():creatives(info.genre());
     return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(preview);
   }
+  public record AccessOptions(boolean currentlyPlayable,boolean currentPremiumSubscription,
+       boolean contextualSponsorPreviewAvailable,boolean rentalPurchasesAvailable,
+       boolean actualAdInsertionAvailable,String notice) {}
+  @GetMapping("/access-options")
+  @Transactional(readOnly=true)
+  public ResponseEntity<AccessOptions> accessOptions(@AuthenticationPrincipal Jwt jwt,
+                                        @RequestParam UUID profileId,@RequestParam UUID titleId){
+    UUID owner=user(jwt);
+    boolean premium=billing.hasPremium(owner);
+    boolean canPlay=playback.availability(jwt,profileId,titleId).playable();
+    Eligible info=eligible(jwt,profileId,titleId,owner);
+    boolean adPreview=info!=null&&!creatives(info.genre()).isEmpty();
+    return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(
+      new AccessOptions(canPlay,premium,adPreview,false,false,
+        "No TVOD checkout or advertising insertion is enabled. Playback always uses verified entitlements."));
+  }
+
   @PostMapping("/preview-events")
   @Transactional
   public ResponseEntity<Receipt> observe(@AuthenticationPrincipal Jwt jwt,

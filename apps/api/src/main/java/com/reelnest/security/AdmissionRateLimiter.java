@@ -34,6 +34,9 @@ public class AdmissionRateLimiter extends OncePerRequestFilter {
         else if(path.equals("/api/v1/profiles"))limit=8;
         else if(path.equals("/api/v1/device-handoff"))limit=5;
         else if(path.equals("/api/v1/device-handoff/redeem"))limit=10;
+        else if(path.equals("/api/v1/avod/preview-events"))limit=6;
+        else if(path.equals("/api/v1/avod/admin/creatives"))limit=4;
+        else if(path.matches("/api/v1/avod/admin/creatives/[0-9a-fA-F-]{36}/review"))limit=4;
         else if(path.equals("/api/v1/support/cases"))limit=5;
         else if(path.matches("/api/v1/support/cases/[0-9a-fA-F-]{36}/appeal"))limit=3;
         if(limit==0) {chain.doFilter(req,response);return;}
