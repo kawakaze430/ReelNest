@@ -1,8 +1,12 @@
 package com.reelnest.catalogpreview
 
+import android.Manifest
 import android.app.Activity
 import android.app.AlertDialog
 import android.os.Bundle
+import android.os.Build
+import android.content.pm.PackageManager
+import android.content.Intent
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.LinearLayout
@@ -36,6 +40,26 @@ class CatalogActivity : Activity() {
             text="Checking the public catalog...";textSize=17f
         }
         layout.addView(status)
+        // Permission request is strictly user initiated, not on startup.
+        if(Build.VERSION.SDK_INT >= 33) {
+            layout.addView(Button(this).apply {
+                text="Allow optional notifications (no push delivery configured)"
+                setOnClickListener {
+                    if(checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED)
+                        requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS),3901)
+                }
+            })
+        }
+        layout.addView(Button(this).apply {
+            text="Clear private offline preview files"
+            setOnClickListener {
+                val removed=OfflineRights.purgePrivatePreviewFiles(getDir("offline-preview",MODE_PRIVATE))
+                status.text="Cleared $removed private preview files. Offline playback remains unavailable."
+            }
+        })
+        val incomingTitle=SafeCatalogLink.titleId(intent?.dataString)
+        if(intent?.dataString!=null && incomingTitle==null)
+            status.text="Invalid catalog link rejected."
         val origin=BuildConfig.API_ORIGIN
         if(origin=="https://api.example.org") {
             status.text="Configure an authorized HTTPS API origin at build time. Playback is disabled."
@@ -66,6 +90,8 @@ class CatalogActivity : Activity() {
                 if(isFinishing||isDestroyed)return@runOnUiThread
                 status.text=message?:if(titles.isEmpty())"No published titles." else
                     "Browse titles using touch or your TV remote. Protected video is unavailable."
+                if(incomingTitle!=null)
+                    status.text="Catalog link validated. Choose a published title; playback still requires full authorization."
                 titles.forEach { (name,synopsis,genre) ->
                     val card=Button(this).apply {
                         text="$name · $genre";textSize=19f
