@@ -20,7 +20,8 @@ def test_only_Q09_Q10_promoted_from_not_started_to_partial():
     now={x["task_id"]:x for x in read("BUILD32_282_TASKS.csv")}
     changed={k for k in old if old[k]["build31_status"]!=now[k]["build32_status"]}
     assert changed=={"Q-09","Q-10"}
-    assert now["Q-09"]["build32_status"]=="Partially implemented"\n    assert now["Q-10"]["build32_status"]=="Partially implemented"
+    assert now["Q-09"]["build32_status"]=="Partially implemented"
+    assert now["Q-10"]["build32_status"]=="Partially implemented"
     assert dict(Counter(v["build32_status"] for v in now.values()))=={
       "Component CI verified — production acceptance pending":5,
       "Source implemented — runtime unverified":67,
