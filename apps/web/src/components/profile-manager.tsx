@@ -21,7 +21,15 @@ export function ProfileManager() {
   const [newPin,setNewPin] = useState<Record<string,string>>({});
   const [pinStatus,setPinStatus] = useState<Record<string,boolean>>({});
   const [personalization,setPersonalization] = useState<Record<string,boolean>>({});
+  const [selectedProfile,setSelectedProfile] = useState('');
   const token = auth.user?.access_token;
+  useEffect(()=>{
+    const key=`reelnest:active-profile:${auth.user?.profile.sub??'anonymous'}`;
+    const sync=()=>setSelectedProfile(window.localStorage.getItem(key)??'');
+    sync();
+    window.addEventListener(PROFILE_EVENT,sync);
+    return()=>window.removeEventListener(PROFILE_EVENT,sync);
+  },[auth.user?.profile.sub]);
 
   useEffect(() => {
     if (!token) return;
@@ -108,7 +116,7 @@ export function ProfileManager() {
     <label className="check"><input type="checkbox" checked={!!personalization[p.id]} disabled={busy}
       onChange={()=>void togglePersonalization(p.id)}/> Personalized recommendations (optional)</label>
     <button onClick={()=>void remove(p.id)} disabled={busy} className="text-btn danger"><Trash2 size={15}/> Remove</button></div>)}</div>
-    <DeviceHandoff activeProfileId={profiles.find(p=>p.id===window.localStorage.getItem(`reelnest:active-profile:${auth.user?.profile.sub??'anonymous'}`))?.id??profiles[0]?.id??''} profileIds={profiles.map(p=>p.id)}/>
+    <DeviceHandoff activeProfileId={profiles.some(p=>p.id===selectedProfile)?selectedProfile:profiles[0]?.id??''} profileIds={profiles.map(p=>p.id)}/>
     {profiles.length < 5 && <form onSubmit={e=>void create(e)} className="profile-form"><h3><Plus size={19}/> Add a profile</h3><div className="form-fields"><label>Profile name<input value={name} maxLength={40} required placeholder="e.g. Alex" onChange={e=>setName(e.target.value)}/></label><label>Language<select value={language} onChange={e=>setLanguage(e.target.value as 'en'|'hi')}><option value="en">English</option><option value="hi">Hindi</option></select></label><label className="check"><input type="checkbox" checked={child} onChange={e=>setChild(e.target.checked)}/> Child profile</label><button type="submit" disabled={busy || !name.trim()} className="btn btn-primary">{busy?'Saving...':'Create profile'}</button></div></form>}
   </div>;
 }
