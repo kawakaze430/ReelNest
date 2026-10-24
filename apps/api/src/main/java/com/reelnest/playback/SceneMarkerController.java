@@ -31,7 +31,7 @@ public class SceneMarkerController {
         this.jdbc=jdbc;this.playback=playback;this.creators=creators;this.users=users;
     }
     public record Scene(int ordinal,String label,String summary,int startSeconds,int endSeconds) {}
-    public record SceneUpdate(@NotNull @Size(max=40) List<@Valid SceneMarkerPolicy.Entry> scenes) {}
+    public record SceneUpdate(@NotNull @Size(max=40) List<SceneMarkerPolicy.Entry> scenes) {}
 
     @GetMapping("/admin/titles/{titleId}/media/{assetId}/scenes")
     @PreAuthorize("hasRole('ADMIN')")
