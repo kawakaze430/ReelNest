@@ -17,8 +17,8 @@ def test_39_audit_entries_have_real_acceptance_conditions():
     assert len(previous)==len(audit)==39
     assert previous=={a["id"] for a in audit}
     assert all(a["blocking_dependency"] and a["next_engineering_step"] and a["production_acceptance_evidence"] for a in audit)
-    assert sum(a["build30_status"]=="Partially implemented" for a in audit)==5
-    assert sum(a["build30_status"]=="Not started / no audited implementation evidence" for a in audit)==34
+    assert sum(a["build30_status"]=="Partially implemented" for a in audit)==6
+    assert sum(a["build30_status"]=="Not started / no audited implementation evidence" for a in audit)==33
 
 def test_282_historical_status_fields_and_no_acceptance_overwriting():
     before=rows("BUILD29_282_TASKS.csv")
@@ -32,15 +32,15 @@ def test_282_historical_status_fields_and_no_acceptance_overwriting():
     assert dict(Counter(r["build30_status"] for r in after))=={
       "Component CI verified — production acceptance pending":5,
       "Source implemented — runtime unverified":67,
-      "Partially implemented":127,
+      "Partially implemented":128,
       "Blocked — external execution / operator verification":32,
       "Blocked — external approval / account":17,
-      "Not started / no audited implementation evidence":34
+      "Not started / no audited implementation evidence":33
     }
 
-def test_only_five_optional_tasks_reclassified_to_partial():
+def test_only_six_optional_tasks_reclassified_to_partial():
     old={r["task_id"]:r for r in rows("BUILD29_282_TASKS.csv")}
     new={r["task_id"]:r for r in rows("BUILD30_282_TASKS.csv")}
     moved={k for k in old if old[k]["build29_status"]!=new[k]["build30_status"]}
-    assert moved=={"F-12","L-17","L-19","P-02","P-10"}
+    assert moved=={"F-12","G-14","L-17","L-19","P-02","P-10"}
     assert all(new[k]["build30_evidence_and_blocker"] for k in moved)
