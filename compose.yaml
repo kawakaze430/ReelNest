@@ -62,7 +62,7 @@ services:
     volumes: ["rabbitmq_data:/var/lib/rabbitmq"]
 
   minio:
-    image: quay.io/minio/minio:latest
+    image: cgr.dev/chainguard/minio:latest
     command: ["server", "/data", "--console-address", ":9001"]
     environment:
       MINIO_ROOT_USER: reelnest_dev
@@ -74,7 +74,7 @@ services:
     volumes: ["minio_data:/data"]
 
   minio-init:
-    image: quay.io/minio/mc:latest
+    image: cgr.dev/chainguard/minio-client:latest-dev
     restart: "no"
     depends_on:
       minio: {condition: service_started}

@@ -32,7 +32,7 @@ jobs:
             -p 127.0.0.1:9000:9000 \
             -e MINIO_ROOT_USER="$MINIO_TEST_ACCESS_KEY" \
             -e MINIO_ROOT_PASSWORD="$MINIO_TEST_SECRET_KEY" \
-            quay.io/minio/minio:latest server /data --address ':9000'
+            cgr.dev/chainguard/minio:latest server /data --address ':9000'
           ready=0
           for n in $(seq 1 45); do
             if curl --fail --silent http://127.0.0.1:9000/minio/health/live > /dev/null; then ready=1; break; fi
