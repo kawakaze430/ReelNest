@@ -15,7 +15,7 @@ def test_editor_review_and_entitlement_are_both_required():
 def test_migration_is_v26_only_and_old_schema_not_rewritten():
     m=ROOT/"apps/api/src/main/resources/db/migration"
     versions=sorted(int(p.name.split("__")[0][1:]) for p in m.glob("V*__*.sql"))
-    assert versions==list(range(1,27))
+    assert versions==list(range(1,28))
     sql=(m/"V26__editor_reviewed_scene_markers.sql").read_text()
     assert "CREATE TABLE media_scene_markers" in sql
     assert "REFERENCES media_assets(id) ON DELETE CASCADE" in sql

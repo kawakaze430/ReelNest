@@ -38,7 +38,7 @@ printf 'Confirming media-worker modules inside the running non-root container...
 docker compose exec -T video-worker python -c 'import worker, pipeline, caption_packaging, timed_text, audio_packaging, preview_artwork'
 printf 'Checking Flyway migrations...\n'
 docker compose exec -T postgres psql -U reelnest -d reelnest -Atqc \
- "SELECT CASE WHEN COUNT(DISTINCT version) FILTER (WHERE success AND version IN ('1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20','21','22','23','24','25','26'))=26 AND COUNT(*) FILTER (WHERE NOT success)=0 THEN 'PASS' ELSE 'FAIL' END FROM flyway_schema_history" | grep '^PASS$'
+ "SELECT CASE WHEN COUNT(DISTINCT version) FILTER (WHERE success AND version IN ('1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20','21','22','23','24','25','26','27'))=27 AND COUNT(*) FILTER (WHERE NOT success)=0 THEN 'PASS' ELSE 'FAIL' END FROM flyway_schema_history" | grep '^PASS$'
 printf 'Checking API smoke tests...\n'
 python3 scripts/live_smoke.py
 bash scripts/security_smoke_live.sh

@@ -44,7 +44,7 @@ class FlywayUpgradeTest {
 
         Flyway upgrade=Flyway.configure().dataSource(url,user,password)
             .locations("classpath:db/migration").load();
-        assertEquals(17,upgrade.migrate().migrationsExecuted,"Migrate existing V9 to V26");
+        assertEquals(18,upgrade.migrate().migrationsExecuted,"Migrate existing V9 to V27");
         List<Integer> applied=new ArrayList<>();
         try(var conn=DriverManager.getConnection(url,user,password);
             var statement=conn.createStatement();
@@ -55,7 +55,7 @@ class FlywayUpgradeTest {
                 applied.add(Integer.parseInt(result.getString("version")));
             }
         }
-        assertEquals(java.util.stream.IntStream.rangeClosed(1,26).boxed().toList(),applied);
+        assertEquals(java.util.stream.IntStream.rangeClosed(1,27).boxed().toList(),applied);
         assertEquals(0,upgrade.migrate().migrationsExecuted,"Upgrade must be idempotent");
     }
 }
