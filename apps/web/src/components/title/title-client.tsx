@@ -8,6 +8,7 @@ import {apiFetch,ApiError} from '@/lib/api';
 import {demoTitles} from '@/lib/demo-data';
 import {useActiveProfile} from '@/hooks/use-active-profile';
 import {ProfilePicker} from '@/components/profile-picker';
+import {ContextualPreviewPanel} from '@/components/contextual-preview-panel';
 import type {Title} from '@/types/catalog';
 
 type SeriesEpisode = {titleId:string;name:string;synopsis:string;seasonNumber:number;episodeNumber:number;
@@ -114,6 +115,8 @@ export function TitleClient(){
         <Link href="/my-list" className="btn btn-outline">View My List</Link>
       </div>
       <div style={{marginTop:23}}><ProfilePicker compact/></div>
+      {availability?.playable&&viewer.token&&viewer.profileId&&title.accessTier==='FREE'&&
+        <ContextualPreviewPanel token={viewer.token} profileId={viewer.profileId} titleId={title.id}/>}
       {availability&&!availability.playable&&<div className="notice notice-dark" role="status"><ShieldAlert size={18}/>{availability.message}</div>}
       {notice&&<div className="notice notice-dark" role="status"><BadgeInfo size={18}/>{notice}</div>}
       <div className="notice notice-dark" role="note"><ShieldAlert size={18}/> Fictional seed catalog entries contain metadata only and do not have licensed videos. Playback requires a published, rights-approved creator film with READY HLS media. <Link href="/lab">View the public original HLS lab clip →</Link></div>
