@@ -32,6 +32,8 @@ public class AdmissionRateLimiter extends OncePerRequestFilter {
         else if(path.equals("/api/v1/privacy/deletion-request"))limit=2;
         else if(path.equals("/api/v1/me/sessions/revoke-all"))limit=3;
         else if(path.equals("/api/v1/profiles"))limit=8;
+        else if(path.equals("/api/v1/device-handoff"))limit=5;
+        else if(path.equals("/api/v1/device-handoff/redeem"))limit=10;
         else if(path.equals("/api/v1/support/cases"))limit=5;
         else if(path.matches("/api/v1/support/cases/[0-9a-fA-F-]{36}/appeal"))limit=3;
         if(limit==0) {chain.doFilter(req,response);return;}
