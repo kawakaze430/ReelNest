@@ -26,6 +26,9 @@ def measure(path: Path) -> dict:
     with open_fn(path,"rt",encoding="utf-8") as stream:
         for n,line in enumerate(stream,1):
             if n>MAX_LINES:raise ValueError("Too many log lines")
+            # Bound each decompressed row as well as compressed file size to prevent
+            # gzip expansion or a forged enormous field from exhausting CI memory.
+            if len(line)>16384:raise ValueError("CloudFront log row exceeds safe limit")
             line=line.rstrip("\r\n")
             if line.startswith("#Fields:"):
                 fieldnames=line[len("#Fields:"):].strip().split()
