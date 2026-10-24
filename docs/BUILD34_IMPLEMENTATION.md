@@ -25,7 +25,7 @@
 | **Not started/no audited implementation** | **20** |
 | **Total** | **282** |
 
-**The 20 still-unstarted features have NOT been completed.** They include Android and iOS native clients, Android/Apple TV hardware apps, DRM key-provider contracts, trusted offline license/download architecture, watermarking vendors, plan-change/proration, multi-region RDS consistency, advertising/ad fraud, live ingest, multi-tenant data isolation, HDR/Dolby mastering, and royalty payout systems. `docs/BUILD30_39_ADVANCED_AUDIT.json` describes dependencies for each.
+**The 20 still-unstarted tasks have NOT been implemented.** Examples include encrypted DRM playback, certified TV player UX, licensed offline downloads, multi-region deployment, real advertising, live-event ingest, tenant-isolated OTT, HDR/Dolby mastering and royalty settlement. The new native Android/iOS catalog previews and the read-only plan-change UI are counted as **partial**, not as complete products. Original dependencies are retained in `docs/BUILD30_39_ADVANCED_AUDIT.json`.
 
 ## Release verdict
 **NO-GO**. G1 full verified creator→HLS→licensed viewer workflow, G2 sandbox money/entitlements, G3 AWS staging, G4 security and licensed distribution, and G5 country-by-country launch remain open. No AWS, money movement, app-store publication, third-party DRM keys, or production data changes occurred.
@@ -39,3 +39,28 @@
 
 ## G-10 subscription plan-change review (new)
 The secured endpoint `GET /api/v1/billing/plan-change-preview?targetPlan=PREMIUM` requires a single active, provider-confirmed paid subscription, checks current and requested active INR plans, and returns the current list-price difference. It explicitly returns `automaticChangeAvailable=false` and `proratedAmountPaise=null`. The membership page offers a read-only preview and support link. No upgrade, downgrade, immediate charge, cancellation, refund, or entitlement mutation is permitted from this route. Merchant-approved proration, period boundaries, stateful intent, payment webhooks and E2E still need implementation and sandbox proof.
+
+## Exact 20 tasks still unstarted (not merely blocked)
+
+| Task | Requested capability | Principal blocker / next proof |
+|---|---|---|
+| F-13 | Integrate Widevine on supported browser/Android clients | Widevine license-provider contract and CDM test hardware |
+| F-14 | Integrate FairPlay for Safari/iOS/tvOS clients | FairPlay Streaming provider certificates and Apple device access |
+| F-15 | Integrate PlayReady for Windows/selected TV clients | PlayReady provider access, Windows/TV CDM test devices |
+| F-17 | Implement rights-driven watermarking or forensic watermark vendor integration | Rights-holder watermarking authorization and vendor |
+| F-18 | Test offline DRM licences where offline downloads are permitted | Offline rights, secure device key store and F-13/F-14/F-15 |
+| L-21 | Add regional API deployment, Route53 latency routing when justified | Repeated cross-region latency demand and independent ops capacity |
+| L-22 | Plan database cross-region replication and consistency/failover | Database replication strategy, residency contracts and replay plan |
+| M-04 | Test Android/iOS auth flows and deep links | Registered Android/iOS deep-link domains, OIDC redirect URIs and real devices |
+| M-05 | Implement mobile download manager only for authorized offline titles | Offline contractual rights and OS secure storage DRM licences |
+| M-06 | Handle expiration, key renewal and delete downloaded media | Offline DRM renewal APIs, key expiry and cleanup policy |
+| M-07 | Build Android TV / Google TV focus-based player UX | Android TV emulator/device, input/focus accessibility resources |
+| M-08 | Build Apple tvOS player and focus/navigation UX | Apple tvOS hardware and Xcode, App Store tests |
+| M-13 | Set up push notifications, privacy prompts and crash analytics | Push provider consent, Android/iOS app identifiers and privacy review |
+| Q-01 | Introduce AVOD advertising with server/client insertion where permitted | Advertising inventory rights, consent manager, SSAI vendor and content classification |
+| Q-02 | Offer AVOD/SVOD/TVOD hybrid packages and experiments | Commercial price catalog, experiment consent and revenue accounting |
+| Q-03 | Implement live events with separate ingest and low-latency pipeline | Live ingest infrastructure, event licences, streaming operations budget |
+| Q-07 | Add multi-tenant white-label OTT capabilities if commercially justified | Tenant isolation model, contractual SLAs and data residency |
+| Q-11 | Add 4K HDR/Dolby formats as device/licence support grows | HDR mastering rights, encoding capacity and device compatibility matrix |
+| Q-12 | Add ad measurement, fraud detection and privacy controls | Ad consent, aggregated measurements and brand safety contracts |
+| Q-13 | Introduce advanced creator licensing marketplace and royalties | Creator royalty contracts, KYC/tax compliance and auditable financial ledger |
