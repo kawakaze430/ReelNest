@@ -12,7 +12,7 @@ const primary=[
   {href:'/pricing',label:'Plans'}, {href:'/my-list',label:'My List'}, {href:'/collections',label:'Collections'},
 ];
 const secondary=[
-  {href:'/continue-watching',label:'Continue Watching'}, {href:'/channels',label:'Channels'}, {href:'/watch-party',label:'Watch Party'},
+  {href:'/continue-watching',label:'Continue Watching'}, {href:'/achievements',label:'Achievements'}, {href:'/channels',label:'Channels'}, {href:'/watch-party',label:'Watch Party'},
   {href:'/creator',label:'Creator Studio'}, {href:'/admin',label:'Review Console'},
   {href:'/admin/analytics',label:'Analytics'}, {href:'/admin/editorial',label:'Editorial'}, {href:'/admin/support',label:'Support queue'}, {href:'/lab',label:'HLS Lab'},
   {href:'/account/privacy',label:'Privacy'}, {href:'/support',label:'Help & FAQ'},
