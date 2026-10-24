@@ -15,18 +15,46 @@ public interface TitleRepository extends JpaRepository<TitleEntity, UUID> {
     Optional<TitleEntity> findByIdAndStatus(UUID id, String status);
     Optional<TitleEntity> findBySlugAndStatus(String slug,String status);
 
-    @Query("""
-      select t from TitleEntity t
-      where t.status = 'PUBLISHED'
-      and (:genre is null or lower(t.genre) = lower(:genre))
-      and (:language is null or lower(t.language) = lower(:language))
-      and (:query is null or lower(t.name) like lower(concat('%', :query, '%'))
-           or lower(t.synopsis) like lower(concat('%', :query, '%')))
-      """)
-    Page<TitleEntity> search(
+    // Reuse this exact eligibility predicate for every public catalog entry point.
+    // Public metadata is *not* a media entitlement. Actual access is still
+    // checked by PlaybackService on every session and media request.
+    String PUBLIC_PREDICATE = """
+      FROM titles t
+      WHERE t.status='PUBLISHED'
+        AND EXISTS (SELECT 1 FROM creators c WHERE c.id=t.creator_id AND c.status='APPROVED')
+        AND EXISTS (SELECT 1 FROM content_rights r
+                    JOIN rights_territories rt ON rt.rights_id=r.id
+                    WHERE r.title_id=t.id AND r.status='APPROVED'
+                      AND r.valid_from<=CURRENT_DATE AND r.valid_until>=CURRENT_DATE
+                      AND rt.country_code=:country)
+        AND EXISTS (SELECT 1 FROM media_assets m WHERE m.title_id=t.id
+                    AND m.processing_status='READY' AND m.manifest_key IS NOT NULL)
+      """;
+
+    String FILTERS = """
+        AND (:genre IS NULL OR lower(t.genre)=lower(:genre))
+        AND (:language IS NULL OR lower(t.language)=lower(:language))
+        AND (:query IS NULL OR t.name ILIKE :query ESCAPE '!'
+             OR t.synopsis ILIKE :query ESCAPE '!'
+             OR EXISTS (SELECT 1 FROM title_search_aliases a WHERE a.title_id=t.id
+                        AND a.alias ILIKE :query ESCAPE '!'))
+        """;
+
+    @Query(value="SELECT t.* "+PUBLIC_PREDICATE+FILTERS+
+             " ORDER BY t.featured DESC,t.created_at DESC,t.id DESC",
+           countQuery="SELECT COUNT(*) "+PUBLIC_PREDICATE+FILTERS,
+           nativeQuery=true)
+    Page<TitleEntity> searchPublic(
         @Param("genre") String genre,
         @Param("language") String language,
         @Param("query") String query,
+        @Param("country") String country,
         Pageable pageable
     );
+
+    @Query(value="SELECT t.* "+PUBLIC_PREDICATE+" AND t.id=:id LIMIT 1",nativeQuery=true)
+    Optional<TitleEntity> findPublicById(@Param("id") UUID id,@Param("country") String country);
+
+    @Query(value="SELECT t.* "+PUBLIC_PREDICATE+" AND t.slug=:slug LIMIT 1",nativeQuery=true)
+    Optional<TitleEntity> findPublicBySlug(@Param("slug") String slug,@Param("country") String country);
 }
