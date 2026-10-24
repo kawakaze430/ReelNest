@@ -12,6 +12,11 @@ trap 'docker compose exec -T postgres dropdb --if-exists -U reelnest "$DB" 2>/de
 # The archive contains real development records. Never share it; keep temporary files private.
 umask 077
 docker compose exec -T postgres pg_dump -U reelnest -Fc reelnest > "$ARCHIVE"
+BACKUP_COMPLETED_UTC=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+# Simulated incident is recorded after backup. A real RPO measurement would
+# also require a write watermark: do NOT claim zero transaction data loss.
+INCIDENT_UTC=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+RESTORE_STARTED_UTC=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 docker compose exec -T postgres createdb -U reelnest "$DB"
 cat "$ARCHIVE" | docker compose exec -T postgres pg_restore -U reelnest --no-owner -d "$DB"
 LIVE=$(docker compose exec -T postgres psql -U reelnest -d reelnest -Atqc 'SELECT COUNT(*) FROM flyway_schema_history')
@@ -22,4 +27,10 @@ for table in users titles profiles privacy_requests; do
  COPY=$(docker compose exec -T postgres psql -U reelnest -d "$DB" -Atqc "SELECT COUNT(*) FROM $table")
  [[ "$LIVE" == "$COPY" ]] || { echo "Mismatch $table: $LIVE vs $COPY" >&2;exit 1; }
 done
-printf 'PASS isolated logical restore: migrated schema and selected row counts match\n'
+RESTORE_VERIFIED_UTC=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+mkdir -p build-evidence
+python3 scripts/advanced/recovery_objectives.py \
+  --backup-completed "$BACKUP_COMPLETED_UTC" --incident "$INCIDENT_UTC" \
+  --restore-started "$RESTORE_STARTED_UTC" --restore-verified "$RESTORE_VERIFIED_UTC" \
+  --output build-evidence/recovery-objectives.local.json
+printf 'PASS isolated logical restore: migrated schema and selected row counts match; RTO proxy recorded\n'
