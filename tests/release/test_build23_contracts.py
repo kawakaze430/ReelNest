@@ -15,7 +15,7 @@ class Build23Contracts(unittest.TestCase):
  def test_migrations_unique_and_consecutive(self):
   migrations=sorted(DB.glob('V*__*.sql'))
   numbers=sorted(int(re.match(r'V(\d+)__',p.name).group(1)) for p in migrations)
-  self.assertEqual(numbers,list(range(1,26)))
+  self.assertEqual(numbers,list(range(1,27)))
   for p in migrations:
    if int(re.match(r'V(\d+)__',p.name).group(1))>=23:
     self.assertIn('REFERENCES',p.read_text())
