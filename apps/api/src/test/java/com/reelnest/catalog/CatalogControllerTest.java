@@ -36,15 +36,19 @@ class CatalogControllerTest {
             ()->controller.bySlug("../bad")).getStatusCode().value());
     }
     @Test void searchUsesServerCountryAndEscapesLiteralMetacharacters() {
-        when(repository.searchPublic(isNull(),isNull(),eq("%100!%!_!!%"),eq("IN"),any(Pageable.class)))
+        when(repository.searchPublic(isNull(),isNull(),eq("%100!%!_!!%"),isNull(),eq("IN"),any(Pageable.class)))
             .thenReturn(new PageImpl<>(List.of()));
-        assertEquals(0,controller.list(null,null,"100%_!",0,12).getTotalElements());
-        verify(repository).searchPublic(isNull(),isNull(),eq("%100!%!_!!%"),eq("IN"),any(Pageable.class));
+        assertEquals(0,controller.list(null,null,"100%_!",null,0,12).getTotalElements());
+        verify(repository).searchPublic(isNull(),isNull(),eq("%100!%!_!!%"),isNull(),eq("IN"),any(Pageable.class));
         verify(repository,never()).findByIdAndStatus(any(),any());
     }
+    @Test void typeFacetValidatesBeforeDatabaseAccess() {
+        assertEquals(400,assertThrows(ResponseStatusException.class,()->
+            controller.list(null,null,null,"UNLICENSED",0,12)).getStatusCode().value());
+    }
     @Test void unfilteredCatalogIsPaginatedAndRightsBound() {
-        when(repository.searchPublic(isNull(),isNull(),isNull(),eq("IN"),any(Pageable.class)))
+        when(repository.searchPublic(isNull(),isNull(),isNull(),isNull(),eq("IN"),any(Pageable.class)))
             .thenReturn(new PageImpl<>(List.of()));
-        assertEquals(0,controller.list(null,null,null,0,12).getTotalElements());
+        assertEquals(0,controller.list(null,null,null,null,0,12).getTotalElements());
     }
 }

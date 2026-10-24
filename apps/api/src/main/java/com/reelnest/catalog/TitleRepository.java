@@ -34,6 +34,7 @@ public interface TitleRepository extends JpaRepository<TitleEntity, UUID> {
     String FILTERS = """
         AND (:genre IS NULL OR lower(t.genre)=lower(:genre))
         AND (:language IS NULL OR lower(t.language)=lower(:language))
+        AND (:contentType IS NULL OR t.type=:contentType)
         AND (:query IS NULL OR t.name ILIKE :query ESCAPE '!'
              OR t.synopsis ILIKE :query ESCAPE '!'
              OR EXISTS (SELECT 1 FROM title_search_aliases a WHERE a.title_id=t.id
@@ -48,6 +49,7 @@ public interface TitleRepository extends JpaRepository<TitleEntity, UUID> {
         @Param("genre") String genre,
         @Param("language") String language,
         @Param("query") String query,
+        @Param("contentType") String contentType,
         @Param("country") String country,
         Pageable pageable
     );

@@ -30,6 +30,7 @@ public class CatalogController {
         @RequestParam(required = false) String genre,
         @RequestParam(required = false) String language,
         @RequestParam(required = false, name = "q") String query,
+        @RequestParam(required = false, name = "type") String contentType,
         @RequestParam(defaultValue = "0") int page,
         @RequestParam(defaultValue = "12") int size
     ) {
@@ -37,8 +38,10 @@ public class CatalogController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "page must be >= 0; size must be 1-48");
         }
         String term=normalize(query);
+        if(contentType!=null && !contentType.equals("MOVIE") && !contentType.equals("SERIES"))
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Invalid content type");
         return titles.searchPublic(normalize(genre), normalize(language),
-            term==null?null:SearchTextPolicy.likeLiteral(term),country,
+            term==null?null:SearchTextPolicy.likeLiteral(term),contentType,country,
             PageRequest.of(page,size)).map(TitleResponse::from);
     }
 
