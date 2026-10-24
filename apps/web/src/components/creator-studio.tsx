@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { ArrowUpCircle, CheckCircle2, Clapperboard, FileCheck2, LoaderCircle, Plus, ShieldCheck, UploadCloud, UserRound, XCircle } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import {inspectSrt,type CaptionQa} from '@/lib/caption-qa';
+import {SubtitleLocalizationReview} from '@/components/subtitle-localization-review';
 import type { Creator, Draft, Rights, UploadIntent, UploadedPart, MediaJob } from '@/types/creator';
 
 const freshDraft = {name:'',synopsis:'',type:'MOVIE',genre:'Drama',language:'en',ageRating:'U',runtimeMinutes:'',releaseYear:'',accessTier:'FREE'};
@@ -291,7 +292,7 @@ export function CreatorStudio() {
             <button type="submit" disabled={busy} className="btn btn-primary"><FileCheck2 size={16}/> Save rights</button>
           </form>
           <div className="studio-separator"/>
-          <h3>Optional subtitle tracks</h3>
+          <h3>Optional subtitle tracks</h3><SubtitleLocalizationReview/>
           <p>Upload SRT subtitles before the video source. Up to eight language tracks; the media worker converts and validates them against the film duration. Files stay private.</p>
           <div className="studio-form">
             <label>Subtitle language (ISO tag)<input value={captionLanguage} maxLength={16} onChange={e=>setCaptionLanguage(e.target.value.toLowerCase())} placeholder="en"/></label>
