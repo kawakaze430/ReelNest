@@ -24,6 +24,8 @@ import {
 } from '@/lib/player-preferences';
 
 type Quality = { level: number; label: string; height: number };
+type NativeAirPlayVideo = HTMLVideoElement & {webkitShowPlaybackTargetPicker?:()=>void};
+type PlaybackTargetEvent = Event & {availability?:string};
 const LANGUAGE_NAMES: Record<string,string> = { en:'English',hi:'Hindi',es:'Spanish',fr:'French',de:'German',ta:'Tamil',te:'Telugu',eng:'English',hin:'Hindi',spa:'Spanish',fra:'French',tam:'Tamil',tel:'Telugu' };
 function trackLabel(language:string, label:string):string {
   const name=LANGUAGE_NAMES[language.toLowerCase()]||language;
@@ -55,6 +57,7 @@ export function ProtectedPlayer({titleId}:{titleId:string}) {
   const [fullscreen,setFullscreen] = useState(false);
   const [pip,setPip] = useState(false);
   const [pipAvailable,setPipAvailable] = useState(false);
+  const [airplayAvailable,setAirplayAvailable] = useState(false);
   const [qualities,setQualities] = useState<Quality[]>([]);
   const [selectedQuality,setSelectedQuality] = useState(-1);
   const [activeQuality,setActiveQuality] = useState('Auto');
@@ -534,6 +537,21 @@ export function ProtectedPlayer({titleId}:{titleId:string}) {
     if(v)v.muted=!v.muted;
   }
   const nativeHls=mode==='Authorized native HLS';
+  useEffect(()=>{
+    const video=videoRef.current as NativeAirPlayVideo|null;
+    setAirplayAvailable(false);
+    // Only Safari native HLS can expose an OS-owned AirPlay route chooser.
+    // Never hand off API bearer tokens or a raw private media URL.
+    if(!video || !ready || !session || !nativeHls ||
+        typeof video.webkitShowPlaybackTargetPicker!=='function')return;
+    const update=(event:Event)=>{
+      const availability=(event as PlaybackTargetEvent).availability;
+      setAirplayAvailable(availability==='available');
+    };
+    video.addEventListener('webkitplaybacktargetavailabilitychanged',update);
+    return()=>{video.removeEventListener('webkitplaybacktargetavailabilitychanged',update);
+      setAirplayAvailable(false);};
+  },[ready,session,nativeHls]);
   const activeCue=skipAction(session?.cues,position,session?.durationSeconds??0);
   useEffect(()=>{
     const onFull=()=>setFullscreen(Boolean(document.fullscreenElement));
@@ -619,6 +637,13 @@ export function ProtectedPlayer({titleId}:{titleId:string}) {
       <label className="viewer-volume">Volume <input type="range" aria-label="Volume" min={0} max={1} step={0.05} value={volume} onChange={e=>{const v=videoRef.current;if(v){v.volume=Number(e.target.value);v.muted=false;}}}/></label>
       <button type="button" disabled={!session || !ready} onClick={()=>void toggleFullscreen()} aria-label={fullscreen?'Exit fullscreen':'Enter fullscreen'}>{fullscreen?<Minimize size={17}/>:<Maximize size={17}/>}<span>Fullscreen</span></button>
       {pipAvailable&&<button type="button" disabled={!session || !ready} onClick={()=>void togglePiP()} aria-label={pip?'Exit picture in picture':'Enter picture in picture'}><PictureInPicture2 size={17}/><span>{pip?'Exit PiP':'PiP'}</span></button>}
+      {airplayAvailable&&<button type="button" disabled={!session||!ready||!nativeHls}
+        aria-label="Choose AirPlay device" onClick={()=>{
+          const v=videoRef.current as NativeAirPlayVideo|null;
+          if(!ready||!session||!nativeHls||!v?.webkitShowPlaybackTargetPicker)return;
+          try{v.webkitShowPlaybackTargetPicker();}
+          catch{setError('AirPlay is unavailable or not permitted for this protected stream.');}
+        }}>AirPlay</button>}
     </div>
     <div className="viewer-meta">
       <div className="viewer-mode" aria-live="polite"><ShieldCheck size={18}/><span>{mode}</span>{session&&<span className="viewer-position"><Clock3 size={16}/> {prettyTime(position)} / {prettyTime(session.durationSeconds)}</span>}</div>
