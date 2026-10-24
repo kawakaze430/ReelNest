@@ -9,6 +9,7 @@ export type PlaybackSession = {
   expiresAt: string;
   heartbeatIntervalSeconds: number;
   cues: PlaybackCues;
+  visibleWatermarkRequired: boolean;
 };
 
 export type ContinueItem = {

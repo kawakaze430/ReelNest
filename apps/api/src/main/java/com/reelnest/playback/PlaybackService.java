@@ -45,7 +45,7 @@ public class PlaybackService {
     public record Start(@NotNull UUID profileId, @NotNull UUID titleId) {}
     public record Session(UUID sessionId, UUID titleId, String manifestUrl,
                           int resumePositionSeconds, int durationSeconds,
-                          Instant expiresAt, int heartbeatIntervalSeconds, PlaybackCues cues) {}
+                          Instant expiresAt, int heartbeatIntervalSeconds, PlaybackCues cues, boolean visibleWatermarkRequired) {}
     public record Heartbeat(Instant expiresAt) {}
     public record Progress(@Min(0) @Max(86400) int positionSeconds,
                            @Min(1) long sequence) {}
@@ -58,7 +58,7 @@ public class PlaybackService {
 
     private record Profile(UUID userId, boolean child) {}
     private record Asset(UUID id, UUID titleId, String manifestKey, int duration, String age,
-                         String tier) {}
+                         String tier,String rightsBasis) {}
     private record StoredSession(UUID userId, UUID profileId, UUID titleId, UUID assetId,
                                  String status, Instant expiresAt, Instant heartbeat) {}
 
@@ -72,7 +72,7 @@ public class PlaybackService {
 
     private Asset eligibleAsset(UUID titleId, boolean child, UUID userId) {
         List<Asset> assets = jdbc.query("""
-            SELECT m.id,m.title_id,m.manifest_key,m.duration_seconds,t.age_rating,t.access_tier
+            SELECT m.id,m.title_id,m.manifest_key,m.duration_seconds,t.age_rating,t.access_tier,r.rights_basis
             FROM titles t
             JOIN creators c ON c.id=t.creator_id AND c.status='APPROVED'
             JOIN content_rights r ON r.title_id=t.id AND r.status='APPROVED'
@@ -83,7 +83,7 @@ public class PlaybackService {
               AND m.manifest_key IS NOT NULL
             ORDER BY m.created_at DESC LIMIT 1
             """, (rs,i) -> new Asset(rs.getObject(1,UUID.class), rs.getObject(2,UUID.class),
-                rs.getString(3),rs.getInt(4),rs.getString(5),rs.getString(6)),
+                rs.getString(3),rs.getInt(4),rs.getString(5),rs.getString(6),rs.getString(7)),
                 country,titleId,java.sql.Date.valueOf(LocalDate.now(ZoneOffset.UTC)),
                 java.sql.Date.valueOf(LocalDate.now(ZoneOffset.UTC)));
         Asset a = assets.stream().findFirst().orElseThrow(() ->
@@ -160,7 +160,8 @@ public class PlaybackService {
             .stream().findFirst().orElse(PlaybackCues.EMPTY);
         return new Session(id,request.titleId(),cdn.enabled()?cdn.manifestUrl(asset.manifestKey()):mediaUrl(id,"master.m3u8"),
             ResumePolicy.resumePosition(position,asset.duration()),
-            asset.duration(),Instant.now().plusSeconds(SESSION_MINUTES*60),30,cues);
+            asset.duration(),Instant.now().plusSeconds(SESSION_MINUTES*60),30,cues,
+            VisibleWatermarkPolicy.requiredFor(asset.rightsBasis()));
     }
 
     public record NextEpisode(UUID titleId,String name,int seasonNumber,int episodeNumber) {}

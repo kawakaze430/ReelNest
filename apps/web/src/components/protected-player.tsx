@@ -598,6 +598,13 @@ export function ProtectedPlayer({titleId}:{titleId:string}) {
         onVolumeChange={e=>{setMuted(e.currentTarget.muted);setVolume(e.currentTarget.volume);}}
         onError={()=>setError('The browser could not decode the stream. Retry the playback session or select another supported device.')}
         tabIndex={0} aria-label="Private OTT video player. Space play/pause; arrows seek; M mute; F fullscreen; C captions." />
+      {session?.visibleWatermarkRequired&&ready&&<span className="viewer-visible-watermark" aria-hidden="true"
+        style={Math.floor(position/30)%4===0?{top:'19%',left:'10%'}:
+               Math.floor(position/30)%4===1?{top:'22%',right:'12%'}:
+               Math.floor(position/30)%4===2?{bottom:'24%',right:'15%'}:
+               {bottom:'22%',left:'12%'}}>
+        ReelNest · {session.sessionId.slice(0,8).toUpperCase()}
+      </span>}
     </div>
     {session&&<div className="viewer-seek-area">
       <label htmlFor="viewer-seek">Seek position: {prettyTime(position)} of {prettyTime(session.durationSeconds)}</label>
