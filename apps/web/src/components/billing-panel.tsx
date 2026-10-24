@@ -10,6 +10,9 @@ type Plan={code:string;label:string;amountPaise:number;currency:string;active:bo
 type Subscription={id:string;planCode:string;status:string;periodEnd:string|null;paidThrough:string|null;cancelAtCycleEnd:boolean;providerSubscriptionId:string};
 type Billing={premiumAccess:boolean;subscriptions:Subscription[]};
 type Checkout={subscriptionId:string;keyId:string;planCode:string;status:string};
+type PlanChangePreview={currentPlan:string;targetPlan:string;currentAmountPaise:number;
+  targetAmountPaise:number;direction:string;automaticChangeAvailable:boolean;
+  proratedAmountPaise:number|null;notice:string};
 type Market={country:string;currency:string;checkoutAvailable:boolean;notice:string;visiblePlans:string[]};
 type RazorpayCheckout={open:()=>void};
 declare global {interface Window {Razorpay?:new (config:Record<string,unknown>)=>RazorpayCheckout}}
@@ -32,6 +35,8 @@ export function BillingPanel(){
   const [plans,setPlans]=useState<Plan[]>([]);
   const [billing,setBilling]=useState<Billing|null>(null);
   const [selectedMarket,setSelectedMarket]=useState('IN');
+  const [changeTarget,setChangeTarget]=useState('PREMIUM');
+  const [changePreview,setChangePreview]=useState<PlanChangePreview|null>(null);
   const [market,setMarket]=useState<Market|null>(null);
   const [busy,setBusy]=useState('');const [error,setError]=useState('');const [message,setMessage]=useState('');
   const refresh=useCallback(async()=>{
@@ -79,6 +84,16 @@ export function BillingPanel(){
     }catch(err){setError(err instanceof ApiError?err.message:err instanceof Error?err.message:'Checkout unavailable');}
     finally{setBusy('');}
   }
+  async function inspectPlanChange(){
+    if(!token||!billing?.premiumAccess)return;
+    setError('');setChangePreview(null);setBusy('plan-change');
+    try{
+      const data=await apiFetch<PlanChangePreview>(
+        `/api/v1/billing/plan-change-preview?targetPlan=${encodeURIComponent(changeTarget)}`,token);
+      setChangePreview(data);
+    }catch(e){setError(e instanceof Error?e.message:'Plan change unavailable.');}
+    finally{setBusy('');}
+  }
   async function cancel(id:string){
     if(!token||!window.confirm('Request cancellation at the end of your billing cycle?'))return;
     setBusy(id);setError('');
@@ -117,6 +132,21 @@ export function BillingPanel(){
             (!!token&&(!market?.checkoutAvailable||!market.visiblePlans.includes(plan.code)))} onClick={()=>void subscribe(plan.code)}>{busy===plan.code?'Starting checkout...':billing?.premiumAccess?'Membership active':!token?'Sign in to subscribe':'Subscribe securely'}</button>}
       </article>)}
     </section>
+    {billing?.premiumAccess&&<section className="studio-panel" aria-label="Plan change review">
+      <h2>Considering a different membership?</h2>
+      <p>Preview current published plan prices. This does not amend a subscription, calculate
+        prorated charges or authorize additional video access.</p>
+      <label>Requested plan <select value={changeTarget} onChange={e=>{
+        setChangeTarget(e.target.value);setChangePreview(null);
+      }}><option value="STANDARD">Standard</option><option value="PREMIUM">Premium</option></select></label>
+      <button type="button" className="btn btn-outline" disabled={!!busy}
+        onClick={()=>void inspectPlanChange()}>Review a plan change</button>
+      {changePreview&&<div role="status">
+        <p>{changePreview.currentPlan} (₹{(changePreview.currentAmountPaise/100).toFixed(2)}) → {changePreview.targetPlan} (₹{(changePreview.targetAmountPaise/100).toFixed(2)})</p>
+        <p>{changePreview.notice}</p>
+        <p><Link href="/support">Contact support about plan changes</Link>.</p>
+      </div>}
+    </section>}
     <section className="billing-history" aria-label="Your subscriptions">
       <div className="billing-history-title"><h2>Your membership</h2><button className="btn btn-outline" disabled={!token||!!busy} onClick={()=>void refresh().catch(()=>setError('Could not refresh billing status'))}><RefreshCw size={16}/> Refresh status</button></div>
       {!token?<p>Sign in to view subscriptions and manage billing.</p>:!billing?<p>Loading your membership from the server…</p>:
