@@ -40,7 +40,7 @@ class CatalogControllerTest {
             .thenReturn(new PageImpl<>(List.of()));
         assertEquals(0,controller.list(null,null,"100%_!",0,12).getTotalElements());
         verify(repository).searchPublic(isNull(),isNull(),eq("%100!%!_!!%"),eq("IN"),any(Pageable.class));
-        verify(repository,never()).search(any(),any(),any(),any());
+        verify(repository,never()).findByIdAndStatus(any(),any());
     }
     @Test void unfilteredCatalogIsPaginatedAndRightsBound() {
         when(repository.searchPublic(isNull(),isNull(),isNull(),eq("IN"),any(Pageable.class)))
