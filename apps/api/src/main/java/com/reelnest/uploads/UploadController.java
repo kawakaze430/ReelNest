@@ -25,6 +25,13 @@ public class UploadController {
     public UploadService.Intent get(@AuthenticationPrincipal Jwt jwt,@PathVariable UUID titleId,@PathVariable UUID id) {
         return uploads.get(jwt,titleId,id);
     }
+    @GetMapping("/{id}/parts")
+    public org.springframework.http.ResponseEntity<List<UploadService.UploadedPart>> uploadedParts(
+        @AuthenticationPrincipal Jwt jwt,@PathVariable UUID titleId,@PathVariable UUID id) {
+        return org.springframework.http.ResponseEntity.ok()
+            .cacheControl(org.springframework.http.CacheControl.noStore())
+            .body(uploads.uploadedParts(jwt,titleId,id));
+    }
     @GetMapping("/{id}/parts/{partNumber}")
     public UploadService.PartUrl part(@AuthenticationPrincipal Jwt jwt,@PathVariable UUID titleId,
         @PathVariable UUID id,@PathVariable int partNumber) { return uploads.part(jwt,titleId,id,partNumber); }

@@ -28,3 +28,5 @@ export type MediaJob = {
   progress_stage?:string|null;progress_percent?:number|null;
   processing_details?:unknown;
 };
+
+export type UploadedPart = {partNumber:number;eTag:string;sizeBytes:number};

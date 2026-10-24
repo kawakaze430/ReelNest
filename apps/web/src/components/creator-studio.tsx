@@ -6,11 +6,24 @@ import Link from 'next/link';
 import { ArrowUpCircle, CheckCircle2, Clapperboard, FileCheck2, LoaderCircle, Plus, ShieldCheck, UploadCloud, UserRound, XCircle } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import {inspectSrt,type CaptionQa} from '@/lib/caption-qa';
-import type { Creator, Draft, Rights, UploadIntent, MediaJob } from '@/types/creator';
+import type { Creator, Draft, Rights, UploadIntent, UploadedPart, MediaJob } from '@/types/creator';
 
 const freshDraft = {name:'',synopsis:'',type:'MOVIE',genre:'Drama',language:'en',ageRating:'U',runtimeMinutes:'',releaseYear:'',accessTier:'FREE'};
 const draftTypes = ['MOVIE','SERIES'];
 const ratingChoices = ['U','UA7','UA13','UA16','A'];
+
+// Browser-local sample fingerprint protects accidental cross-file resumes without
+// reading multi-gigabyte uploads into memory. It is NOT a full-file checksum.
+async function uploadFileSample(file:File):Promise<string> {
+  const sample=64*1024;
+  const bytes=new Blob([file.slice(0,Math.min(sample,file.size)),
+    file.slice(Math.max(0,file.size-sample))]);
+  const hash=await crypto.subtle.digest('SHA-256',await bytes.arrayBuffer());
+  return `${file.name}:${file.size}:${Array.from(new Uint8Array(hash),b=>b.toString(16).padStart(2,'0')).join('')}`;
+}
+function uploadKey(subject:string,titleId:string,uploadId:string) {
+  return `reelnest:upload-sample:${subject}:${titleId}:${uploadId}`;
+}
 
 export function CreatorStudio() {
   const auth = useAuth();
@@ -144,34 +157,75 @@ export function CreatorStudio() {
   async function uploadVideo() {
     if(!token||!selected||!file)return;
     await run(async()=>{
-      const base=`/api/v1/creator/titles/${selected}/uploads`;
+      const titleId=selected;
+      const base=`/api/v1/creator/titles/${titleId}/uploads`;
       const mime=file.type || ({'.mp4':'video/mp4','.mov':'video/quicktime','.mkv':'video/x-matroska'}[file.name.substring(file.name.lastIndexOf('.')).toLowerCase()]||'');
-      const intent=await apiFetch<UploadIntent>(base,token,{method:'POST',
+      // Consult authoritative backend state: browser uploads may outlive page reloads.
+      const current=await apiFetch<UploadIntent[]>(base,token);
+      const open=current.find(u=>u.status==='INITIATED'&&new Date(u.expiresAt).getTime()>Date.now());
+      if(open && (open.filename!==file.name || open.expectedBytes!==file.size))
+        throw new Error('A different file has an unfinished upload. Choose that exact original file or cancel the pending upload below.');
+      const intent=open??await apiFetch<UploadIntent>(base,token,{method:'POST',
         body:JSON.stringify({filename:file.name,contentType:mime,sizeBytes:file.size})});
-      const parts:{partNumber:number;eTag:string}[]=[];
-      setPercent(0);
+      setUploads(old=>[intent,...old.filter(u=>u.id!==intent.id)]);
+      const key=uploadKey(auth.user?.profile.sub??'anonymous',titleId,intent.id);
+      const signature=await uploadFileSample(file);
+      const recorded=window.localStorage.getItem(key);
+      if(open && recorded && recorded!==signature)
+        throw new Error('Selected file differs from the original upload. Re-select the same video or cancel that upload.');
+      // A different browser has no matching fingerprint, so overwrite *all* parts
+      // rather than combining potentially unrelated files with equal names/sizes.
+      const skipExisting=Boolean(open && recorded===signature);
+      window.localStorage.setItem(key,signature);
       try {
-        for(let n=1;n<=intent.partCount;n++) {
-          const signed=await apiFetch<{partNumber:number;url:string;expiresInSeconds:number}>(
-            `${base}/${intent.id}/parts/${n}`,token);
-          const start=(n-1)*intent.partSizeBytes;
-          const chunk=file.slice(start,Math.min(file.size,start+intent.partSizeBytes));
-          // S3 presigned URLs require direct binary PUT. Never attach the API bearer token.
-          const sent=await fetch(signed.url,{method:'PUT',body:chunk});
-          const etag=sent.headers.get('ETag');
-          if(!sent.ok||!etag) throw new Error(`Part ${n} upload failed or ETag is not exposed by storage CORS.`);
-          parts.push({partNumber:n,eTag:etag});
+        const remote=await apiFetch<UploadedPart[]>(`${base}/${intent.id}/parts`,token);
+        const existing=new Map(skipExisting?remote.map(p=>[p.partNumber,p.eTag]):[]);
+        const parts:{partNumber:number;eTag:string}[]=[];
+        setPercent(Math.round(existing.size/intent.partCount*100));
+        for(let n=1;n<=intent.partCount;n++){
+          let eTag=existing.get(n);
+          if(!eTag){
+            const start=(n-1)*intent.partSizeBytes;
+            const chunk=file.slice(start,Math.min(file.size,start+intent.partSizeBytes));
+            let lastError='The upload was interrupted';
+            for(let attempt=1;attempt<=3;attempt++){
+              try{
+                const signed=await apiFetch<{partNumber:number;url:string;expiresInSeconds:number}>(
+                  `${base}/${intent.id}/parts/${n}`,token);
+                // Never attach the API bearer token to a presigned storage PUT.
+                const sent=await fetch(signed.url,{method:'PUT',body:chunk});
+                const received=sent.headers.get('ETag');
+                if(sent.ok&&received){eTag=received;break;}
+                lastError=`Storage PUT returned HTTP ${sent.status} or did not expose ETag`;
+              }catch(e){lastError=e instanceof Error?e.message:'Network request failed';}
+              if(attempt<3)await new Promise(resolve=>setTimeout(resolve,400*attempt));
+            }
+            if(!eTag)throw new Error(`Part ${n} failed after three attempts. ${lastError}`);
+          }
+          parts.push({partNumber:n,eTag});
           setPercent(Math.round(n/intent.partCount*100));
         }
         await apiFetch<UploadIntent>(`${base}/${intent.id}/complete`,token,
           {method:'POST',body:JSON.stringify({parts})});
-        setFile(null);setSuccess('Source uploaded. HLS processing has been queued; check the processing status below.');
-        await refreshSelected(selected);
-      } catch(err) {
-        // Abort incomplete uploads. A retry starts a fresh multipart upload.
-        await apiFetch<void>(`${base}/${intent.id}`,token,{method:'DELETE'}).catch(()=>{});
-        throw err;
+        window.localStorage.removeItem(key);
+        setFile(null);
+        setSuccess('Upload completed. The private media worker will now encode your film.');
+        await refreshSelected(titleId);
+      }catch(error){
+        // Crucial: do not abort and destroy parts on a transient network failure.
+        await refreshSelected(titleId).catch(()=>{});
+        throw new Error(`${error instanceof Error?error.message:'Upload interrupted'}. Progress is saved in private storage for 24 hours. Re-select the same original video and click Resume upload.`);
       }
+    });
+  }
+  async function cancelUpload(id:string) {
+    if(!token||!selected)return;
+    await run(async()=>{
+      await apiFetch<void>(`/api/v1/creator/titles/${selected}/uploads/${id}`,token,{method:'DELETE'});
+      window.localStorage.removeItem(uploadKey(auth.user?.profile.sub??'anonymous',selected,id));
+      setFile(null);setPercent(0);
+      await refreshSelected(selected);
+      setSuccess('Unfinished multipart upload cancelled.');
     });
   }
   async function reopen() {
@@ -256,11 +310,11 @@ export function CreatorStudio() {
               onClick={()=>void removeCaptions(c.language)}>Remove</button>
           </div>)}</div>}
           <div className="studio-separator"/>
-          <h3>Upload original video</h3><p>MP4, MOV or MKV · up to 5 GiB · 16 MiB multipart uploads. The application server never handles your video bytes.</p>
+          <h3>Upload original video</h3><p>MP4, MOV or MKV · up to 5 GiB · 16 MiB multipart uploads. Uploads resume after interruptions for up to 24 hours: choose the same original file. The application server never handles video bytes.</p>
           <input className="studio-file" type="file" accept=".mp4,.mov,.mkv,video/mp4,video/quicktime,video/x-matroska" onChange={e=>{setFile(e.target.files?.[0]??null);setPercent(0);}}/>
           {file&&<p className="studio-file-note">{file.name} · {(file.size/1024/1024).toFixed(1)} MiB</p>}
           {busy&&percent>0&&<div className="studio-meter"><div style={{width:`${percent}%`}}/></div>}
-          <button type="button" onClick={()=>void uploadVideo()} className="btn btn-outline" disabled={busy||!file}><UploadCloud size={17}/>{busy&&percent>0?`Uploading ${percent}%`:'Upload securely'}</button>
+          <button type="button" onClick={()=>void uploadVideo()} className="btn btn-outline" disabled={busy||!file}><UploadCloud size={17}/>{busy&&percent>0?`Uploading ${percent}%`:uploads.some(u=>u.status==='INITIATED'&&new Date(u.expiresAt).getTime()>Date.now())?'Resume upload':'Upload securely'}</button>
           <div className="studio-separator"/>
           <h3>Submit for review</h3>
           <p>Rights declaration: <b>{rights?.status||'Not submitted'}</b> · Uploaded films: <b>{uploads.filter(u=>u.status==='COMPLETED').length}</b></p>
@@ -275,7 +329,9 @@ export function CreatorStudio() {
           {m.job_state==='RUNNING'&&<progress aria-label="Media processing progress" max={100} value={m.progress_percent??0} style={{width:'100%'}}/>}
           {m.last_error&&<small className="studio-file-note">Worker: {m.last_error}</small>}</span><em>{m.job_state||'WAITING'}</em>
         </div>)}</div>
-        <h3>Recent uploads</h3><div className="studio-list">{uploads.length===0?<p>No uploads recorded.</p>:uploads.map(u=><div className="studio-list-item" key={u.id}><span><strong>{u.filename}</strong><small>{(u.expectedBytes/1024/1024).toFixed(1)} MiB</small></span><em>{u.status}</em></div>)}</div>
+        <h3>Recent uploads</h3><div className="studio-list">{uploads.length===0?<p>No uploads recorded.</p>:uploads.map(u=><div className="studio-list-item" key={u.id}><span><strong>{u.filename}</strong><small>{(u.expectedBytes/1024/1024).toFixed(1)} MiB</small></span><em>{u.status}</em>
+            {u.status==='INITIATED'&&<button type="button" className="btn btn-outline" disabled={busy}
+              onClick={()=>void cancelUpload(u.id)}>Cancel upload</button>}</div>)}</div>
       </>}</section></div>
     </div>}
   </main>;

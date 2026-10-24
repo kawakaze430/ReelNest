@@ -41,6 +41,8 @@ public class UploadService {
     public record Intent(UUID id, UUID titleId, String filename, String status, long expectedBytes,
                          long partSizeBytes, int partCount, Instant expiresAt) {}
     public record PartUrl(int partNumber, String url, int expiresInSeconds) {}
+    // The response contains no storage key, upload ID, presigned URL or credentials.
+    public record UploadedPart(int partNumber, String eTag, long sizeBytes) {}
     public record ClientPart(@Min(1) int partNumber, @NotBlank @Size(max = 128) String eTag) {}
     public record CompleteRequest(@NotEmpty List<@jakarta.validation.Valid ClientPart> parts) {}
 
@@ -120,10 +122,24 @@ public class UploadService {
                 rs.getString("original_filename"),rs.getString("status"),rs.getLong("expected_bytes"),
                 rs.getLong("part_size_bytes"),rs.getInt("part_count"),rs.getTimestamp("expires_at").toInstant()),titleId);
     }
+    /** Report only object-store-confirmed parts for an owned, still-open draft upload. */
+    @Transactional(readOnly=true)
+    public List<UploadedPart> uploadedParts(Jwt jwt, UUID titleId, UUID id) {
+        Row r=owned(jwt,titleId,id);
+        ensureDraft(titleId,r.creatorId());
+        if (!"INITIATED".equals(r.status()) || !Instant.now().isBefore(r.expires()))
+            throw new ResponseStatusException(HttpStatus.CONFLICT,"Upload is no longer resumable");
+        var remote=s3.listParts(ListPartsRequest.builder().bucket(bucket).key(r.key())
+            .uploadId(r.providerId()).build());
+        return UploadPartSnapshot.validate(remote,r.bytes(),r.partCount()).stream()
+            .map(part->new UploadedPart(part.partNumber(),part.eTag(),part.sizeBytes())).toList();
+    }
+
     @Transactional
     public PartUrl part(Jwt jwt, UUID titleId, UUID id, int number) {
         Row r = owned(jwt,titleId,id);
-        if (!"INITIATED".equals(r.status()) || Instant.now().isAfter(r.expires()))
+        ensureDraft(titleId,r.creatorId());
+        if (!"INITIATED".equals(r.status()) || !Instant.now().isBefore(r.expires()))
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Upload is no longer open");
         if (number < 1 || number > r.partCount())
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid part number");
