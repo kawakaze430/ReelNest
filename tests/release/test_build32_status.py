@@ -15,17 +15,17 @@ def test_no_mutation_of_older_backlog_evidence():
     for old,new in zip(before,after):
         for k,v in old.items():
             assert new[k]==v,(old["task_id"],k)
-def test_only_Q09_promoted_from_not_started_to_partial():
+def test_only_Q09_Q10_promoted_from_not_started_to_partial():
     old={x["task_id"]:x for x in read("BUILD31_282_TASKS.csv")}
     now={x["task_id"]:x for x in read("BUILD32_282_TASKS.csv")}
     changed={k for k in old if old[k]["build31_status"]!=now[k]["build32_status"]}
-    assert changed=={"Q-09"}
-    assert now["Q-09"]["build32_status"]=="Partially implemented"
+    assert changed=={"Q-09","Q-10"}
+    assert now["Q-09"]["build32_status"]=="Partially implemented"\n    assert now["Q-10"]["build32_status"]=="Partially implemented"
     assert dict(Counter(v["build32_status"] for v in now.values()))=={
       "Component CI verified — production acceptance pending":5,
       "Source implemented — runtime unverified":67,
-      "Partially implemented":130,
+      "Partially implemented":131,
       "Blocked — external execution / operator verification":31,
       "Blocked — external approval / account":17,
-      "Not started / no audited implementation evidence":32
+      "Not started / no audited implementation evidence":31
     }

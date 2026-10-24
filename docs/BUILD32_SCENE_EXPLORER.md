@@ -19,10 +19,10 @@ This is **human-reviewed scene indexing**, not automatic CV/NLP scene understand
 |---|---:|
 | CI verified (narrow historical components) | 5 |
 | Source implemented, runtime unverified | 67 |
-| Partially implemented | 130 |
+| Partially implemented | 131 |
 | Blocked, execution/testing | 31 |
 | Blocked, vendor/account approval | 17 |
-| Not started | 32 |
+| Not started | 31 |
 | **Total** | **282** |
 
 **Production acceptance remains 0/282.** G1 creator-to-licensed-stream E2E, G2 payment acceptance, G3 AWS staging, G4 security/data recovery, and G5 licensed territory release remain OPEN. No AWS resources or live payments were created.
@@ -34,3 +34,6 @@ This is **human-reviewed scene indexing**, not automatic CV/NLP scene understand
 - Next.js: `cd apps/web && npm ci && npm run typecheck && npm run build`
 - Release: `python3 -m pytest tests/release/test_build32_scenes.py tests/release/test_build32_status.py -q`
 - Manual G1: reviewer adds scene marker to approved READY asset, eligible signed-in profile sees scene and can jump to time; another profile/expired right/anonymous request must get 403; no media may be unlocked by scene metadata.
+
+## Second feature — human subtitle-localization QA (Q-10)
+Creator Studio now includes a browser-only source-versus-translated SRT comparison, using the existing strict SRT validator. This checks cue count, timeline differences over 250ms, unchanged text, and unsafe subtitle markup. No caption text is uploaded by the comparison operation. Creators still upload their manually approved translations through the existing private caption source API *before video encoding*. No generative translation, dubbing, audio mastering or editor language approval is implemented. Task Q-10 advances to partial implementation. `node scripts/test_build32_translation.mjs` performs the runtime QA algorithm checks in CI.
