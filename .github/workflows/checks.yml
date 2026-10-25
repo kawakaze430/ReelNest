@@ -136,7 +136,7 @@ jobs:
       - name: Install Python dependencies
         run: python3 -m pip install -r apps/video-worker/requirements.txt -r apps/recommendation-api/requirements.txt -r apps/recommendation-lab/requirements.txt pytest pyyaml httpx
       - name: Install FFmpeg
-        timeout-minutes: 5
+        timeout-minutes: 15
         run: bash scripts/ensure_ci_ffmpeg.sh
       - name: Media and ML tests
         run: python3 -m pytest apps/video-worker/tests apps/recommendation-lab/tests apps/recommendation-api/tests tests/handoff tests/release/test_build12_contracts.py -q
@@ -206,7 +206,7 @@ jobs:
       - name: Install Python test dependencies
         run: python3 -m pip install pytest pyyaml scikit-learn fastapi httpx uvicorn
       - name: Install FFmpeg
-        timeout-minutes: 5
+        timeout-minutes: 15
         run: bash scripts/ensure_ci_ffmpeg.sh
       - name: Install locked frontend dependencies for pure TypeScript player tests
         working-directory: apps/web

@@ -1,5 +1,13 @@
 # Current execution and integration status
 
+## Paused after dependency patches: 26 October 2026
+
+At the owner's request, commit the completed changes and pause; inspect the next CI results before resuming tests. Run `40233675820` at `224de7a` passed eight component jobs and the separate PostgreSQL workflow, but the worker's five-minute FFmpeg installation step timed out while Ubuntu packages were still downloading. G1 was skipped. The install budget is now 15 minutes within the existing 20-minute job limits; tool reuse, repository/signature verification and bounded retries remain unchanged.
+
+A partial public-advisory review queried 20 exact runtime coordinates and found 29 matching advisory records. Verified available, compatible-generation patches now pin Tomcat 10.1.61, Jackson BOM 2.21.8, PostgreSQL JDBC 42.7.14 and Netty 4.1.139.Final. Actual dependency resolution confirmed the expected versions (21 changes among 146 runtime coordinates). Eight affected-component queries at the new versions returned no matches; two Spring MVC matches remain for XSLT/SSE view-fragment features absent from the reviewed source. This is limited advisory/reachability evidence, not a complete scan or an approved security waiver. Boot/Spring major versions were preserved. Repository Dependabot alerts are disabled, and the integration lacks permission to inspect automatic security-fix settings.
+
+After these patches, real Maven verify passed: 92 collected, 77 passed, 15 opt-in cases skipped, zero failures/errors, exit 0. Workflow actionlint and diff checks passed. Current-source PostgreSQL/full media integration must still complete in CI; no success is inferred. Legal acceptance remains deferred. No cloud deployment, financial transaction, production-data operation, branch or PR was created.
+
 ## Access restored and real technical integration: 26 October 2026
 
 Normal Git push succeeded: all three formerly local commits are on `origin/main` through `a534c48c2cb8fcf366af334c835be088421c0dc6`. Runtime revision 7 includes the prepared host rules. Both MinIO images pulled successfully, and previously blocked Actions logs/artifacts downloaded. The earlier access blockers are resolved.
