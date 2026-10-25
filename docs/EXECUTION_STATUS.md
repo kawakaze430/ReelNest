@@ -12,6 +12,8 @@ A reproduced sanitizer defect allowed a harmless `Detail:` label to conceal a ne
 
 All historical task ledgers and applied migrations are preserved. Earlier dated sections below describe their own checkpoints and are superseded by this continuation where results differ.
 
+The CI changes received a second read-only review with no blocking findings. Change-selection behavior also passed all 32 cases (115 focused checks total, exit 0). Publication then hit a new, confirmed blocker: normal Git push received HTTP 401 (git exit 128), while private fetch/API reads still succeed. Remote `main` therefore remains `d4ae145a5b3c79104e623957ee2856ce2ab87265`; reviewed repair commit `aa886918a07f12d50acb9a22342f23bd111b0e93` is local only. Its new remote CI is NOT RUN. Restore repository write authentication and apply the pending network rules using [owner actions](OWNER_ACTIONS_TO_UNBLOCK.md); no credentials should be sent in chat.
+
 ## Network update and actual remote CI: 25 October 2026
 
 The user's settings update activated runtime revision 2 with `api.github.com` and `cgr.dev`. GitHub API access now works. At exact commit `c55dea46`, [all nine Build checks component jobs passed](https://github.com/kawakaze430/ReelNest/actions/runs/40197670843), [all PostgreSQL migration/upgrade/catalog/playback/worker stages passed](https://github.com/kawakaze430/ReelNest/actions/runs/40197670723), and [Android debug/unsigned-release compilation plus real lint passed](https://github.com/kawakaze430/ReelNest/actions/runs/40197670752). Apple was skipped in that push run. These are observed remote conclusions, not source-only claims. Artifact test counts still need the underlying XML.
