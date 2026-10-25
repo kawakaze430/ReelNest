@@ -116,7 +116,7 @@ jobs:
           PY
       - name: Upload sanitized reports and command diagnostics
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: g1-integration-${{ github.sha }}-${{ github.run_attempt }}
           path: |

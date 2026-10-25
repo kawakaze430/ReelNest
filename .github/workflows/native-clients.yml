@@ -62,7 +62,7 @@ jobs:
           PY
       - name: Retain native compilation and lint evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: android-catalog-${{ github.sha }}
           path: |
@@ -136,7 +136,7 @@ jobs:
           PY
       - name: Retain Apple compiler and SDK diagnostics
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: apple-catalog-${{ github.sha }}
           path: build-evidence/native/apple/
