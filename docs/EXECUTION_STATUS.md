@@ -1,5 +1,13 @@
 # Current execution and integration status
 
+## Network update and actual remote CI: 25 October 2026
+
+The user's settings update activated runtime revision 2 with `api.github.com` and `cgr.dev`. GitHub API access now works. At exact commit `c55dea46`, [all nine Build checks component jobs passed](https://github.com/kawakaze430/ReelNest/actions/runs/40197670843), [all PostgreSQL migration/upgrade/catalog/playback/worker stages passed](https://github.com/kawakaze430/ReelNest/actions/runs/40197670723), and [Android debug/unsigned-release compilation plus real lint passed](https://github.com/kawakaze430/ReelNest/actions/runs/40197670752). Apple was skipped in that push run. These are observed remote conclusions, not source-only claims. Artifact test counts still need the underlying XML.
+
+Full acceptance actually failed at its stack/E2E step with exit 1; restore was skipped. The root cause is not yet readable: log downloads redirect to `results-receiver.actions.githubusercontent.com`, artifacts to rotating `*.blob.core.windows.net` hosts, and MinIO server/client blobs to the specific Cloudflare R2 host listed in [owner actions](OWNER_ACTIONS_TO_UNBLOCK.md). Those additional destinations remain blocked. The follow-up draft was confirmed saved, preserving the two working rules/presets; it still requires user review/save/publication.
+
+The evidence sanitizer now redacts exact Azure SAS `sig` parameters/fields/flags; seven synthetic leaks were reproduced and repaired, with all 44 evidence-runner tests passing. Native manual dispatch can select Apple alone, avoiding a repeat of the passing Android job. Full G1 remains failed/unaccepted; no missing log content or external release gate is inferred to have passed.
+
 ## Blocker review: 25 October 2026
 
 The latest pass continued from `c7a81eb2`. A real PostgreSQL regression reproduced a stale media worker changing a replacement worker's completed READY asset back to PROCESSING. The worker now validates and locks its exact live claim before changing media state or starting pipeline work. Nine actual PostgreSQL claim/lease/state tests passed after repair, with fixtures cleaned. A dedicated CI stage now runs these cases.
@@ -62,11 +70,11 @@ Reports/logs remain in ignored `build-evidence/`: `cloud-g0-latest.json`, `brows
 
 Full acceptance requires exact-source G0 proof and an isolated, uniquely named disposable project. Stages check readiness, strict migrations, browser identity, original film/caption upload, worker processing, rights review/publication, private HLS bytes, actual browser frames/time advancement, two-account/session/JWT denial and logical restore. Unique logs preserve original exit codes; credentials/signed URLs are redacted; timeout cleanup stops descendants. Artifact retention is bounded. Cleanup targets only the CI run's own volumes. CI does not rewrite source or automatically deploy/pay.
 
-**Full G1 remains NOT ACCEPTED.** The current MinIO image registry is policy-denied at `cgr.dev`. Actual upload → worker → published private HLS → browser decoding has not passed here. Component proofs do not substitute for that workflow.
+**Full G1 remains NOT ACCEPTED.** GitHub-hosted acceptance failed with exit 1 and its detailed log is currently blocked at the Actions log-download host. Locally, MinIO manifests are reachable but registry blob downloads are blocked at the observed R2 host. Actual upload → worker → published private HLS → browser decoding has not passed here. Component proofs do not substitute for that workflow.
 
-**Remote CI observation is BLOCKED:** `gh run list` cannot connect to `api.github.com` through the current proxy. Git fetch/push can work independently. A pushed workflow is configured to execute, not a claimed successful remote run.
+**Remote job observation now works:** exact-SHA component, PostgreSQL and Android conclusions above are verified through the API. Detailed logs/artifact downloads remain BLOCKED at their redirect destinations; the integration failure's source cause must not be guessed.
 
-The cloud configuration draft preserves existing network presets, includes the required `api.github.com` and `cgr.dev` access, and saves tested install/start instructions. The later blocker pass removed the unused optional `storage.googleapis.com` request. Review/save those environment settings and publish; a draft save does not apply networking or publish. Retry the denied operations after the observed runtime changes. GitHub-hosted CI has its own network policy and may independently complete the automatic G1 job.
+The cloud configuration draft preserves existing network presets and the now-working `api.github.com`/`cgr.dev` rules, adds the observed registry/Actions download destinations, and retains tested install/start instructions. Review/save the follow-up settings and publish; an agent draft save does not apply networking or publish. Retry the denied operations after the observed runtime changes.
 
 G2 payment/provider verification, G3 AWS staging/CDN, G4 independent security/load/recovery/legal approval and G5 licensed territorial launch remain open. No financial transaction, deployment, DNS change or production database operation was performed. **Production readiness is not established.**
 

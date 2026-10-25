@@ -2,18 +2,21 @@
 
 GitHub `kawakaze430/ReelNest`, branch `main`, is canonical. Continue without new branches, worktrees or PRs; reconcile newer commits and push normally. Do not force-push or treat a passing component check as complete commercial acceptance.
 
-## First action: save the prepared network rules
+## Current action: save the additional download destinations
 
-The running cloud environment still has no active explicit grants for `cgr.dev` or `api.github.com`. The prepared environment draft already requests those hosts and retains the package-manager preset. The agent can save that draft; its available tools cannot apply or publish it.
+The first settings update succeeded: runtime revision 2 allows `cgr.dev` and `api.github.com`. GitHub API access works, and exact-commit Android, PostgreSQL and component job results have been verified. The registry index works too. Actual downloads redirect to additional storage hosts, which remain denied. The prepared follow-up draft retains the two working rules and package-manager presets and adds the observed download destinations. Agent tools can save this draft but cannot apply or publish it.
 
 Open this ReelNest cloud environment's settings, review its prepared configuration and save these hostname rules:
 
-| Hostname | Operation it enables |
+| Hostname | Operation/status |
 | --- | --- |
-| `cgr.dev` | Pull the repository's actual MinIO server/client images for full media integration |
-| `api.github.com` | Observe current commit's GitHub Actions jobs and artifacts using existing scoped authentication |
+| `cgr.dev` | Working registry manifests/authentication; retain this rule |
+| `api.github.com` | Working GitHub run/job metadata; retain this rule |
+| `9236a389bd48b984df91adc1bc924620.r2.cloudflarestorage.com` | Actual MinIO server/client image blobs; registry redirects were observed for both images |
+| `results-receiver.actions.githubusercontent.com` | Download the failing integration job's logs to diagnose its actual error |
+| `*.blob.core.windows.net` | GitHub Actions artifact archives use rotating Azure storage accounts; accounts 11, 13 and 16 were observed |
 
-Do not paste tokens, passwords or secret files into chat. Existing Git fetch/push authentication works. Adding a personal access token cannot fix the network-policy denial.
+Do not paste tokens, passwords, signed download links or secret files into chat. Existing Git fetch/push and GitHub API authentication work. Additional credentials cannot fix these destination-policy denials.
 
 User-facing configuration save can request a runtime update. Publication is separate: it creates an active reusable environment version/snapshot. Neither an agent draft save nor a general instruction to continue applies network rules. After saving, continue this task so the agent can inspect the observed configuration and retry the affected operations. Publish the prepared environment through the product when it is ready for reuse; do not confuse publication with a verified integration test.
 

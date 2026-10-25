@@ -317,6 +317,48 @@ def test_signed_log_urls_do_not_expose_signature_or_credentials():
 
 
 @pytest.mark.parametrize('parameters', [
+    'sig=synthetic-sas-value%2Bencoded%3D&safe=1',
+    'safe=1&sig=synthetic-sas-value%2Bencoded%3D',
+    'sv=2025-01-05&SIG=synthetic-sas-value%2Bencoded%3D&safe=1',
+])
+def test_azure_artifact_sas_signature_is_redacted_without_losing_diagnostics(parameters):
+    from urllib.parse import parse_qsl, urlsplit
+    url = 'https://productionresultssa11.blob.core.windows.net/actions/artifact.zip?' + parameters
+    safe = cloud.redact(url)
+    assert 'synthetic-sas-value' not in safe
+    assert urlsplit(safe).hostname == 'productionresultssa11.blob.core.windows.net'
+    assert urlsplit(safe).path == '/actions/artifact.zip'
+    fields = dict(parse_qsl(urlsplit(safe).query))
+    assert fields.get('sig', fields.get('SIG')) == '[REDACTED]'
+    assert fields['safe'] == '1'
+
+
+@pytest.mark.parametrize('text', [
+    'sig=synthetic-sas-value',
+    'SIG="synthetic SAS value with spaces"',
+    '{"sig": "synthetic SAS value with spaces", "status": "denied"}',
+])
+def test_exact_sig_assignments_and_json_fields_are_redacted(text):
+    safe = cloud.redact(text)
+    assert 'synthetic' not in safe
+    assert '[REDACTED]' in safe
+    if 'status' in text:
+        assert '"status": "denied"' in safe
+
+
+def test_sig_argument_is_sensitive_but_unrelated_signal_and_design_names_are_preserved():
+    command = ['tool', '--sig', 'synthetic-sas-value', '--signal', 'TERM', '--design=preview']
+    assert cloud.safe_command(command) == ['tool', '--sig', '[REDACTED]', '--signal', 'TERM', '--design=preview']
+    diagnostic = 'signal=TERM design=preview signatureCount=3 sigmoid=enabled'
+    assert cloud.redact(diagnostic) == diagnostic
+    url = 'https://example.invalid/test?signal=TERM&design=preview&signatureCount=3&sigmoid=enabled'
+    # The existing broader signature parameter protection is retained. Other
+    # words containing the letters "sig" must not be treated as SAS signatures.
+    safe = cloud.redact(url)
+    assert 'signal=TERM' in safe and 'design=preview' in safe and 'sigmoid=enabled' in safe
+
+
+@pytest.mark.parametrize('parameters', [
     'GoogleAccessId=google-account-sensitive&Signature=google-signature-sensitive&Expires=1234567890',
     'X-Amz-Credential=aws-account-sensitive&X-Amz-Signature=aws-signature-sensitive&X-Amz-Security-Token=aws-token-sensitive',
     'X-Goog-Credential=goog-account-sensitive&X-Goog-Signature=goog-signature-sensitive',

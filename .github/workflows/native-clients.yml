@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
     inputs:
       apple_simulators:
-        description: Also compile unsigned iOS/tvOS simulator apps on a macOS runner (uses additional CI minutes)
+        description: Compile unsigned iOS/tvOS simulators instead of Android (uses additional macOS CI minutes)
         type: boolean
         default: false
 permissions:
@@ -23,6 +23,7 @@ defaults:
 jobs:
   android:
     name: Android debug, unsigned release and lint
+    if: github.event_name != 'workflow_dispatch' || !inputs.apple_simulators
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:

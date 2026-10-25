@@ -47,17 +47,22 @@ requirements above and retains compiler/lint reports and APK artifacts for seven
 days. A debug APK signature is not production signing or installation evidence.
 
 Unsigned iOS/tvOS simulator compilation is available only by manually dispatching
-that workflow with `apple_simulators=true` (default **false**). It uses one macOS
+that workflow with `apple_simulators=true` (default **false**). This selects only
+the Apple job and skips Android, so a missing Apple check does not repeat an
+already-passing Android build. Normal source pushes and a manual dispatch with
+the input false select Android. The Apple job uses one macOS
 runner, checksum-pinned XcodeGen 2.44.1, records the installed Xcode/SDK versions,
 and checks both actual built app plists. It consumes additional private CI
 minutes; no Apple job is automatically dispatched. No developer account,
 certificate, provisioning profile, device installation or store upload is used.
 
-These jobs are configured but their native build results have **not** been
-observed from this managed Linux environment: Android tooling/Xcode are absent,
-and GitHub API observation remains blocked. Configuration/source checks do not
-prove successful native compilation. Inspect exact-commit job results before
-claiming either platform passed.
+At commit `c55dea46a588a8f76422ed98a4d2f855640dc5bd`, the actual Android compilation
+and lint job [passed in GitHub Actions](https://github.com/kawakaze430/ReelNest/actions/runs/40197670752).
+The Apple job was skipped; unsigned iOS/tvOS compilation is still unverified.
+GitHub API metadata is now accessible from the managed Linux environment, while
+artifact-download hosts still require additional network access. Configuration
+checks do not prove compiler or device behavior. Inspect exact-commit job results
+before claiming a newer build passed.
 
 All clients consume only `GET /api/v1/catalog` with no credentials. They never
 use private manifests, reuse browser bearer tokens, or pretend that a public

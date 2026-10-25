@@ -1,7 +1,10 @@
 """Validate native compiler inputs/cost guards, not native SDK execution."""
+import ast
 from pathlib import Path
+import re
 import xml.etree.ElementTree as ET
 
+import pytest
 import yaml
 
 
@@ -11,6 +14,31 @@ ANDROID = '{http://schemas.android.com/apk/res/android}'
 
 def workflow():
     return yaml.safe_load((ROOT / '.github/workflows/native-clients.yml').read_text())
+
+
+def selected_job(job, event, apple_simulators):
+    """Evaluate the workflow's actual simple boolean expression over its inputs."""
+    expression = workflow()['jobs'][job]['if']
+    expression = expression.replace('github.event_name', repr(event))
+    expression = expression.replace('inputs.apple_simulators', repr(apple_simulators))
+    expression = expression.replace('&&', ' and ').replace('||', ' or ')
+    expression = re.sub(r'!(?!=)', ' not ', expression).strip()
+    tree = ast.parse(expression, mode='eval')
+    allowed = (ast.Expression, ast.BoolOp, ast.And, ast.Or, ast.UnaryOp,
+               ast.Not, ast.Compare, ast.Eq, ast.NotEq, ast.Constant)
+    assert all(isinstance(node, allowed) for node in ast.walk(tree)), 'Unexpected job-condition syntax'
+    return eval(compile(tree, '<native-job-condition>', 'eval'), {'__builtins__': {}})
+
+
+@pytest.mark.parametrize('event,apple_simulators,android,apple', [
+    ('push', False, True, False),
+    ('push', True, True, False),
+    ('workflow_dispatch', False, True, False),
+    ('workflow_dispatch', True, False, True),
+])
+def test_native_dispatch_selects_only_the_requested_platform(event, apple_simulators, android, apple):
+    assert selected_job('android', event, apple_simulators) is android
+    assert selected_job('apple', event, apple_simulators) is apple
 
 
 def test_native_android_pipeline_pins_compatible_toolchain_and_keeps_real_lint():

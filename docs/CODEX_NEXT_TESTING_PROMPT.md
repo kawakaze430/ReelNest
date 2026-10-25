@@ -17,7 +17,7 @@ Take ownership of the requested execution checks and their concrete failures. Fi
 2. Inspect GitHub Actions for that exact SHA, including individual job conclusions and artifacts. Use the existing GitHub authentication; do not request or expose token values merely because the CLI fails.
 3. `Build checks` now runs full disposable integration automatically after successful component jobs when relevant application/integration files change. The standalone PostgreSQL workflow proves clean migrations, an existing V9 upgrade, and real catalog queries. Neither workflow proves payments, AWS or legal approval.
 4. Reuse passing same-source results. Run a failed or missing check; avoid duplicate builds and duplicate manual integration runs. If an exact-SHA run is already active, inspect it rather than dispatching another.
-5. If API access is denied by the environment proxy, record the destination and response. Native Git access can still work. Do not treat inaccessible Actions results as failed jobs or bypass the network policy.
+5. API access now works in runtime revision 2. Detailed job logs and artifacts use additional Actions/Azure destinations; MinIO blobs use its observed R2 host. Read `OWNER_ACTIONS_TO_UNBLOCK.md` and check current policy. Capture download errors privately and sanitize signed URL parameters before any output. Do not treat inaccessible logs as a source diagnosis or bypass the network policy.
 
 ## G0: compilation, dependencies and regression checks
 
@@ -61,7 +61,7 @@ Verify all of the following with actual responses and browser behavior:
 - Private source/processed buckets remain private. Caption, child-age, territory, entitlement, rights-expiry and path-traversal cases need explicit positive/negative evidence before broader security acceptance.
 - A logical backup restores into a uniquely owned scratch database and its selected row counts/migration history match. Cleanup must never drop a database that this run did not create.
 
-Development Compose retains the latest upstream Chainguard MinIO server/client images. Their pull requires `cgr.dev`, which is currently denied by this cloud proxy. A policy denial is an external prerequisite, not permission to bypass the proxy or disable verification. Verify exact image digests and both server/client startup; development floating tags do not establish production storage approval.
+Development Compose retains the latest upstream Chainguard MinIO server/client images. Registry manifests now work at `cgr.dev`; actual image blobs redirect to the additional R2 host in the owner action document. A policy denial is an external prerequisite, not permission to bypass the proxy or disable verification. Verify exact image digests and both server/client startup; development floating tags do not establish production storage approval.
 
 The standalone PostgreSQL workflow also runs `PlaybackPostgresSecurityTest` against its dedicated loopback `reelnest_security_test` database. Preserve the fixes for first-user read-only identity provisioning and the two-stream cap. Real concurrent admissions, stale heartbeat versus expiry, ownership, rights/territory/age, unpaid premium, progress ordering, erasure/suspension and JWT-revocation cutoffs must continue to pass. Synthetic service metadata and a constructed JWT do not establish signature or media delivery acceptance.
 

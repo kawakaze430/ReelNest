@@ -43,8 +43,10 @@ REQUIRED_CI_COMPONENTS = {
 }
 RUN_ID = uuid.uuid4().hex
 SOURCE_AT_START: dict | None = None
+# Azure artifact SAS uses the exact key/flag "sig". Do not match its letters
+# inside unrelated diagnostic names such as "signal" or "design".
 SECRET_KEY = re.compile(
-    r"(?i)(password|passwd|token|secret|authorization|credential|api[_-]?key|private[_-]?key|access[_-]?(?:key|id)|cookie)"
+    r"(?i)(password|passwd|token|secret|authorization|credential|api[_-]?key|private[_-]?key|access[_-]?(?:key|id)|cookie|^(?:--?)?sig$)"
 )
 ASSIGNMENT = re.compile(
     r"(?i)(?P<prefix>[\"']?(?P<key>[A-Z_][A-Z0-9_.-]*)[\"']?\s*[:=]\s*)"
@@ -61,7 +63,7 @@ def redact(text: str) -> str:
     text = re.sub(r"(?i)(\bBearer\s+)[A-Za-z0-9._~+/=-]+", r"\1[REDACTED]", text)
     text = re.sub(r"([a-zA-Z][a-zA-Z0-9+.-]*://)[^/\s@]+@", r"\1[REDACTED]@", text)
     text = re.sub(
-        r"(?i)([?&][^=&\s]*(?:password|token|secret|signature|credential|api[_-]?key|access[_-]?(?:key|id))[^=&\s]*=)[^&#\s]+",
+        r"(?i)([?&](?:sig|[^=&\s]*(?:password|token|secret|signature|credential|api[_-]?key|access[_-]?(?:key|id))[^=&\s]*)=)[^&#\s]+",
         r"\1[REDACTED]", text,
     )
     text = ASSIGNMENT.sub(
