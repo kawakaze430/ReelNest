@@ -18,7 +18,7 @@ jobs:
       MINIO_TEST_ACCESS_KEY: reelnest_ephemeral_only
       MINIO_TEST_SECRET_KEY: reelnest_ephemeral_unsafe_test_only_123
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
