@@ -17,7 +17,8 @@ Take ownership of the requested execution checks and their concrete failures. Fi
 2. Inspect GitHub Actions for that exact SHA, including individual job conclusions and artifacts. Use the existing GitHub authentication; do not request or expose token values merely because the CLI fails.
 3. `Build checks` now runs full disposable integration automatically after successful component jobs when relevant application/integration files change. The standalone PostgreSQL workflow proves clean migrations, an existing V9 upgrade, and real catalog queries. Neither workflow proves payments, AWS or legal approval.
 4. Reuse passing same-source results. Run a failed or missing check; avoid duplicate builds and duplicate manual integration runs. If an exact-SHA run is already active, inspect it rather than dispatching another.
-5. API access now works in runtime revision 2. Detailed job logs and artifacts use additional Actions/Azure destinations; MinIO blobs use its observed R2 host. Read `OWNER_ACTIONS_TO_UNBLOCK.md` and check current policy. Capture download errors privately and sanitize signed URL parameters before any output. Do not treat inaccessible logs as a source diagnosis or bypass the network policy.
+5. API access now works in runtime revision 2. If `gh` reports an invalid inherited token, test a normal HTTPS API request using platform-injected authentication before requesting credentials. Detailed job logs and artifacts use additional Actions/Azure destinations; MinIO blobs use its observed R2 host. Read `OWNER_ACTIONS_TO_UNBLOCK.md` and check current policy. Capture download errors privately and sanitize signed URL parameters before any output. Do not treat inaccessible logs as a source diagnosis or bypass the network policy.
+6. Failed evidence phases now publish sanitized GitHub check annotations, including matching local-stack stage metadata and scoped container diagnostics. Inspect those annotations through the API as well as downloading artifacts when permitted. An annotation identifies a diagnosis only when its actual content establishes the cause.
 
 ## G0: compilation, dependencies and regression checks
 
@@ -69,7 +70,7 @@ The same workflow separately runs `test_worker_postgres.py` with `REELNEST_DISPO
 
 ## Additional client checks
 
-Inspect the path-scoped `Native catalog client compilation` job for the exact SHA. Android debug/unsigned-release compilation and real lint run automatically. Apple unsigned simulator compilation requires explicit manual `apple_simulators=true`; it consumes additional macOS CI minutes and should not be started automatically. Read `apps/mobile/README.md` for exact tool versions and commands. Native source guards do not prove SDK compilation, signed installation, DRM or device playback. Reuse unchanged passing TV Node/packaging results and preserve historical acceptance flags.
+Inspect the path-scoped `Native catalog client compilation` job for the exact SHA. Android debug/unsigned-release compilation and real lint run automatically. Apple unsigned simulator compilation requires explicit manual `apple_simulators=true`; it consumes additional macOS CI minutes and should not be started automatically. Both Apple simulator builds/plist checks already passed at `d4ae145`, Android at `c55dea46`; reuse these results while their component source is unchanged. Read `apps/mobile/README.md` for exact tool versions and commands. Native source guards do not prove SDK compilation, signed installation, DRM or device playback. Reuse unchanged passing TV Node/packaging results and preserve historical acceptance flags.
 
 ## Remaining release gates
 

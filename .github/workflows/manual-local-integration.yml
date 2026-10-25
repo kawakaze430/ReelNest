@@ -92,6 +92,7 @@ jobs:
           trap 'rm -f "$raw_log"' EXIT
           docker compose logs --tail=200 --no-color > "$raw_log" 2>&1 || true
           python3 scripts/cloud_evidence.py --sanitize-log "$raw_log" build-evidence/ci-containers.log
+          python3 scripts/ci_container_diagnostics.py
       - name: Publish phase outcomes in the job summary
         if: always()
         run: |

@@ -43,6 +43,7 @@ REQUIRED_CI_COMPONENTS = {
 }
 RUN_ID = uuid.uuid4().hex
 SOURCE_AT_START: dict | None = None
+GITHUB_ANNOTATION_MAX_BYTES = 2000
 # Azure artifact SAS uses the exact key/flag "sig". Do not match its letters
 # inside unrelated diagnostic names such as "signal" or "design".
 SECRET_KEY = re.compile(
@@ -66,9 +67,18 @@ def redact(text: str) -> str:
         r"(?i)([?&](?:sig|[^=&\s]*(?:password|token|secret|signature|credential|api[_-]?key|access[_-]?(?:key|id))[^=&\s]*)=)[^&#\s]+",
         r"\1[REDACTED]", text,
     )
-    text = ASSIGNMENT.sub(
-        lambda m: m.group("prefix") + "[REDACTED]" if SECRET_KEY.search(m.group("key")) else m.group(0), text,
-    )
+    # A harmless label ("Detail: PASSWORD=...") must not consume a nested
+    # secret assignment as its value. Advance past only the key of nonsecret
+    # matches, and consume the full value only when it has been redacted.
+    parts, cursor, search_from = [], 0, 0
+    while match := ASSIGNMENT.search(text, search_from):
+        if SECRET_KEY.search(match.group("key")):
+            parts.extend((text[cursor:match.start("value")], "[REDACTED]"))
+            cursor = search_from = match.end("value")
+        else:
+            search_from = match.end("key")
+    parts.append(text[cursor:])
+    text = "".join(parts)
     text = re.sub(r"\b(?:AKIA|ASIA)[0-9A-Z]{16}\b", "[REDACTED]", text)
     text = re.sub(r"\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]*", "[REDACTED JWT]", text)
     text = re.sub(r"\bgh[pousr]_[A-Za-z0-9_]{20,}\b", "[REDACTED]", text)
@@ -82,6 +92,74 @@ def safe_command(cmd: list[str]) -> list[str]:
         safe.append("[REDACTED]" if hide_next else redact(arg))
         hide_next = arg.startswith("-") and "=" not in arg and bool(SECRET_KEY.search(arg))
     return safe
+
+
+def emit_github_annotation(message: str, *, level: str = "error") -> None:
+    """Emit one bounded Actions command without leaking credentials or new commands."""
+    if os.getenv("GITHUB_ACTIONS") != "true":
+        return
+    if level not in {"error", "warning"}:
+        raise ValueError("Only error/warning annotations are supported")
+    # Redact before truncation, then escape workflow-command data. In particular,
+    # an original %0A must not become an injected newline after runner decoding.
+    message = redact(str(message)).replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
+    prefix, suffix = f"::{level}::", " [truncated]"
+    budget = GITHUB_ANNOTATION_MAX_BYTES - len(prefix.encode("utf-8"))
+    encoded = message.encode("utf-8", errors="replace")
+    if len(encoded) > budget:
+        message = encoded[:budget - len(suffix)].decode("utf-8", errors="ignore") + suffix
+    else:
+        message = encoded.decode("utf-8")
+    print(prefix + message, flush=True)
+
+
+def _failed_local_stack_step(data: dict, result: dict) -> dict | None:
+    """Use only this validator invocation's small, matching structured stage report."""
+    if (data.get("phase") != "g1" or
+            result.get("command") != ["bash", "scripts/validate_local_stack.sh", "--full"]):
+        return None
+    project, commit = os.getenv("COMPOSE_PROJECT_NAME"), data.get("source_commit")
+    if not project or not commit:
+        return None
+    try:
+        with (EVIDENCE / "local-stack-latest.json").open("rb") as source:
+            raw = source.read(65537)
+        if len(raw) > 65536:
+            return None
+        stack = json.loads(raw)
+        if (not isinstance(stack, dict) or stack.get("project") != project or
+                stack.get("sourceCommit") != commit):
+            return None
+        command_start = dt.datetime.fromisoformat(result["started_at_utc"])
+        stack_start = dt.datetime.fromisoformat(stack["startedAt"])
+        report_time = dt.datetime.fromisoformat(data["timestamp_utc"])
+        if not command_start <= stack_start <= report_time:
+            return None
+        steps = stack.get("steps")
+        if not isinstance(steps, list):
+            return None
+        return next((step for step in steps if isinstance(step, dict)
+                     and step.get("status") in {"FAIL", "BLOCKED"}), None)
+    except (OSError, ValueError, TypeError, KeyError):
+        return None  # Missing/stale diagnostic metadata cannot change the result.
+
+
+def _annotate_failed_report(data: dict) -> None:
+    if os.getenv("GITHUB_ACTIONS") != "true" or data.get("outcome") not in {"FAIL", "BLOCKED"}:
+        return
+    failed = [item for item in data["results"] if item.get("status") in {"FAIL", "BLOCKED", "TIMEOUT"}]
+    if not failed:
+        return
+    item = failed[0]
+    message = (f"ReelNest {str(data['phase']).upper()} {data['outcome']}: {item.get('step')}; "
+               f"status={item.get('status')}; exit={item.get('exit_code')}.")
+    local = _failed_local_stack_step(data, item)
+    if local:
+        message += f" Local stack stage: {local.get('step')}; status={local.get('status')}; exit={local.get('exitCode')}."
+    if len(failed) > 1:
+        message += f" Additional unsuccessful checks: {len(failed) - 1}."
+    message += f" Detail: {item.get('detail', '')}"
+    emit_github_annotation(message, level="error" if data["outcome"] == "FAIL" else "warning")
 
 
 def normalized_next_source(path: Path) -> bytes:
@@ -190,6 +268,7 @@ def run(label: str, cmd: list[str], cwd: Path, phase: str, timeout: int) -> dict
         result.update(status="BLOCKED", detail=redact(error))
         return result
     started = time.monotonic()
+    result["started_at_utc"] = dt.datetime.now(dt.timezone.utc).isoformat()
     try:
         proc = subprocess.Popen(cmd, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                                 text=True, errors="replace", start_new_session=True)
@@ -351,6 +430,7 @@ def report(phase: str, results: list[dict]) -> dict:
     (EVIDENCE / f"cloud-{phase}-latest.md").write_text(markdown, encoding="utf-8")
     print("EVIDENCE:", EVIDENCE / f"cloud-{phase}-latest.json")
     print("SUMMARY:", data["statuses"])
+    _annotate_failed_report(data)
     return data
 
 

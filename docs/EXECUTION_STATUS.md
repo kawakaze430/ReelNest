@@ -1,5 +1,17 @@
 # Current execution and integration status
 
+## CI verification continuation: 26 October 2026
+
+At `d4ae145a5b3c79104e623957ee2856ce2ab87265`, [all nine Build checks component jobs passed](https://github.com/kawakaze430/ReelNest/actions/runs/40211300800), but full-stack acceptance again failed at its stack/E2E command (exit 1); restore was skipped. The slow FFmpeg prerequisite ultimately passed. CI now reuses existing FFmpeg/FFprobe and bounds installation when either is missing; this is an efficiency improvement, not a diagnosis of the acceptance failure.
+
+The [separate Apple-only run passed](https://github.com/kawakaze430/ReelNest/actions/runs/40211313374): real unsigned iOS and tvOS simulator compilation and both built-app plist checks. Android compilation/lint and PostgreSQL migration/upgrade/security/worker results remain verified on unchanged component source at `c55dea46`. No signed installation, protected native playback or hardware certification is claimed.
+
+The new failure reporting emits bounded, credential-redacted, workflow-command-escaped GitHub annotations. G1 stage metadata is accepted only for the matching commit, disposable project and invocation time; failed/unhealthy container logs are inspected before scoped cleanup. Running service readiness logs are explicitly diagnostic warnings. Outcomes and original exit codes remain unchanged. Detailed log/artifact downloads and local MinIO blobs still require the saved follow-up network rules; the runtime currently remains revision 2. Normal GitHub API requests work with platform-injected authentication even when `gh` reports an invalid inherited token; no replacement secret is needed for those reads.
+
+A reproduced sanitizer defect allowed a harmless `Detail:` label to conceal a nested password assignment from the original scan. The scan now examines nested assignments. The evidence runner passed 66 tests, container diagnostics passed 9, and the FFmpeg helper passed 8 (83 total, exit 0). Shell syntax, all five workflows' actionlint validation and unchanged ledger/migration checks also passed. These local checks validate the new diagnostics, not a successful G1 run.
+
+All historical task ledgers and applied migrations are preserved. Earlier dated sections below describe their own checkpoints and are superseded by this continuation where results differ.
+
 ## Network update and actual remote CI: 25 October 2026
 
 The user's settings update activated runtime revision 2 with `api.github.com` and `cgr.dev`. GitHub API access now works. At exact commit `c55dea46`, [all nine Build checks component jobs passed](https://github.com/kawakaze430/ReelNest/actions/runs/40197670843), [all PostgreSQL migration/upgrade/catalog/playback/worker stages passed](https://github.com/kawakaze430/ReelNest/actions/runs/40197670723), and [Android debug/unsigned-release compilation plus real lint passed](https://github.com/kawakaze430/ReelNest/actions/runs/40197670752). Apple was skipped in that push run. These are observed remote conclusions, not source-only claims. Artifact test counts still need the underlying XML.

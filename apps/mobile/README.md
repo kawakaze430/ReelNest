@@ -58,7 +58,8 @@ certificate, provisioning profile, device installation or store upload is used.
 
 At commit `c55dea46a588a8f76422ed98a4d2f855640dc5bd`, the actual Android compilation
 and lint job [passed in GitHub Actions](https://github.com/kawakaze430/ReelNest/actions/runs/40197670752).
-The Apple job was skipped; unsigned iOS/tvOS compilation is still unverified.
+The separate Apple-only run at `d4ae145a5b3c79104e623957ee2856ce2ab87265`
+[passed both unsigned iOS/tvOS simulator builds and built-app plist checks](https://github.com/kawakaze430/ReelNest/actions/runs/40211313374).
 GitHub API metadata is now accessible from the managed Linux environment, while
 artifact-download hosts still require additional network access. Configuration
 checks do not prove compiler or device behavior. Inspect exact-commit job results

@@ -238,6 +238,127 @@ def test_report_preserves_immutable_run_copy_and_current_source_metadata(tempora
     assert 'second-test-run' in (cloud.EVIDENCE / 'cloud-test-latest.json').read_text()
 
 
+@pytest.mark.parametrize('status,code,severity,outcome', [
+    ('FAIL', 17, 'error', 'FAIL'), ('BLOCKED', None, 'warning', 'BLOCKED'),
+    ('TIMEOUT', -15, 'error', 'FAIL'),
+])
+def test_failed_ci_report_annotates_original_step_and_exit_without_changing_results(
+        temporary_evidence, monkeypatch, capsys, status, code, severity, outcome):
+    import json
+    monkeypatch.setenv('GITHUB_ACTIONS', 'true')
+    result = {'step': 'actual component', 'status': status, 'exit_code': code,
+              'detail': 'PASSWORD=synthetic-password\nhttps://blob.example.invalid/object?sig=synthetic-sas&safe=1'}
+    original = json.dumps(result)
+    data = cloud.report('g1', [result])
+    output = capsys.readouterr().out
+    annotations = [line for line in output.splitlines() if line.startswith('::')]
+    assert len(annotations) == 1 and annotations[0].startswith(f'::{severity}::')
+    assert 'actual component' in annotations[0] and f'exit={code}' in annotations[0]
+    assert 'synthetic-password' not in output and 'synthetic-sas' not in output
+    assert 'safe=1' in annotations[0] and '[REDACTED]' in annotations[0]
+    assert data['outcome'] == outcome and data['results'] == [result]
+    assert json.dumps(result) == original
+
+
+@pytest.mark.parametrize('actions,status', [(None, 'FAIL'), ('false', 'BLOCKED'),
+                                         ('true', 'PASS'), ('true', 'SKIPPED')])
+def test_report_never_annotates_passing_unrun_or_non_actions_checks(
+        temporary_evidence, monkeypatch, capsys, actions, status):
+    if actions is None:
+        monkeypatch.delenv('GITHUB_ACTIONS', raising=False)
+    else:
+        monkeypatch.setenv('GITHUB_ACTIONS', actions)
+    cloud.report('test', [{'step': 'component', 'status': status, 'exit_code': 0 if status == 'PASS' else None}])
+    assert not any(line.startswith('::') for line in capsys.readouterr().out.splitlines())
+
+
+@pytest.mark.parametrize('mismatch', [None, 'source', 'project', 'old', 'future', 'naive',
+                                      'missing-start', 'malformed', 'oversized', 'not-validator'])
+def test_g1_annotation_names_only_this_invocations_matching_failed_stack_stage(
+        temporary_evidence, monkeypatch, capsys, mismatch):
+    import datetime as dt
+    import json
+    monkeypatch.setenv('GITHUB_ACTIONS', 'true')
+    monkeypatch.setenv('COMPOSE_PROJECT_NAME', 'reelnest-ci-current')
+    monkeypatch.setattr(cloud, 'source_state', lambda: {'commit': 'a' * 40, 'fingerprint': 'b' * 64, 'dirty': False})
+    now = dt.datetime.now(dt.timezone.utc)
+    result = {'step': 'complete stack', 'status': 'FAIL', 'exit_code': 1,
+              'command': ['bash', 'scripts/validate_local_stack.sh', '--full'],
+              'started_at_utc': (now - dt.timedelta(seconds=5)).isoformat(), 'detail': 'validator exited'}
+    stack = {'project': 'reelnest-ci-current', 'sourceCommit': 'a' * 40,
+             'startedAt': (now - dt.timedelta(seconds=4)).isoformat(),
+             'steps': [{'step': 'configuration', 'status': 'PASS', 'exitCode': 0},
+                       {'step': 'worker readiness', 'status': 'FAIL', 'exitCode': 42}]}
+    if mismatch == 'source':
+        stack['sourceCommit'] = 'c' * 40
+    elif mismatch == 'project':
+        stack['project'] = 'reelnest-ci-previous'
+    elif mismatch == 'old':
+        stack['startedAt'] = (now - dt.timedelta(seconds=10)).isoformat()
+    elif mismatch == 'future':
+        stack['startedAt'] = (now + dt.timedelta(minutes=1)).isoformat()
+    elif mismatch == 'naive':
+        stack['startedAt'] = now.replace(tzinfo=None).isoformat()
+    elif mismatch == 'missing-start':
+        result.pop('started_at_utc')
+    elif mismatch == 'not-validator':
+        result['command'] = ['docker', 'info']
+    cloud.EVIDENCE.mkdir(parents=True)
+    payload = '{broken JSON' if mismatch == 'malformed' else json.dumps(stack)
+    if mismatch == 'oversized':
+        payload += ' ' * 65537
+    (cloud.EVIDENCE / 'local-stack-latest.json').write_text(payload)
+    data = cloud.report('g1', [result])
+    annotations = [line for line in capsys.readouterr().out.splitlines() if line.startswith('::')]
+    assert len(annotations) == 1 and data['outcome'] == 'FAIL'
+    if mismatch is None:
+        assert 'Local stack stage: worker readiness; status=FAIL; exit=42' in annotations[0]
+    else:
+        assert 'Local stack stage:' not in annotations[0]
+
+
+def test_reusable_annotation_redacts_and_escapes_workflow_command_injection(monkeypatch, capsys):
+    monkeypatch.setenv('GITHUB_ACTIONS', 'true')
+    message = ('original%0A::warning::forged\r\n::error::second-command\n'
+               'Bearer eyJhbGciOiJub25lIn0.eyJzdWIiOiJwcml2YXRlIn0.signature\n'
+               'https://blob.example.invalid/archive?sig=synthetic-sas')
+    cloud.emit_github_annotation(message)
+    lines = capsys.readouterr().out.splitlines()
+    assert len(lines) == 1 and lines[0].startswith('::error::')
+    assert '%250A::warning::forged%0D%0A::error::second-command%0A' in lines[0]
+    assert 'eyJhbGciOiJub25lIn0' not in lines[0] and 'synthetic-sas' not in lines[0]
+
+
+def test_reusable_annotation_is_byte_bounded_after_redaction_and_valid_utf8(monkeypatch, capsys):
+    monkeypatch.setenv('GITHUB_ACTIONS', 'true')
+    cloud.emit_github_annotation('PASSWORD=synthetic-password\n' + '\u754c' * 4000, level='warning')
+    line = capsys.readouterr().out.rstrip('\n')
+    assert line.startswith('::warning::') and line.endswith(' [truncated]')
+    assert len(line.encode('utf-8')) <= cloud.GITHUB_ANNOTATION_MAX_BYTES
+    assert 'synthetic-password' not in line and '[REDACTED]' in line
+
+
+def test_reusable_annotation_rejects_injected_level(monkeypatch, capsys):
+    monkeypatch.setenv('GITHUB_ACTIONS', 'true')
+    with pytest.raises(ValueError):
+        cloud.emit_github_annotation('detail', level='error\n::warning::')
+    assert not capsys.readouterr().out
+
+
+@pytest.mark.parametrize('status', ['FAIL', 'BLOCKED'])
+def test_ci_annotation_does_not_change_main_exit_or_underlying_result(
+        temporary_evidence, monkeypatch, capsys, status):
+    import json
+    monkeypatch.setenv('GITHUB_ACTIONS', 'true')
+    monkeypatch.setattr(cloud, 'source_state', lambda: {'commit': 'a' * 40, 'fingerprint': 'b' * 64, 'dirty': False})
+    original = {'step': 'component failed', 'status': status, 'exit_code': 9, 'detail': 'actual failure'}
+    monkeypatch.setattr(cloud, 'evaluate', lambda *args, **kwargs: [original])
+    assert cloud.main(['--phase', 'g0']) == 1
+    saved = json.loads((cloud.EVIDENCE / 'cloud-g0-latest.json').read_text())
+    assert saved['results'] == [original] and saved['outcome'] == status
+    assert f"status={status}; exit=9" in capsys.readouterr().out
+
+
 
 def test_incomplete_g0_report_does_not_claim_phase_pass(temporary_evidence, monkeypatch):
     monkeypatch.setattr(cloud, 'source_state', lambda: {'commit': 'a' * 40, 'fingerprint': 'b' * 64, 'dirty': False})
