@@ -109,6 +109,7 @@ run_step 'unauthenticated security smoke' bash scripts/security_smoke_live.sh
 if [[ "$MODE" == --full ]]; then
  echo 'Running original-asset browser ingestion-to-playback E2E on the confirmed disposable stack.'
  run_step 'browser identity, owned profile picker, locale and player mounting' python3 scripts/e2e_browser_identity_live.py
+ run_step 'PIN denial persistence, profile ownership and atomic device handoff' python3 scripts/e2e_account_security_live.py
  run_step 'creator browser upload, captions, worker and rights publication' python3 scripts/e2e_processing_live.py
  run_step 'browser decoded playback, two-account isolation and revoked media' python3 scripts/e2e_playback_live.py
 fi

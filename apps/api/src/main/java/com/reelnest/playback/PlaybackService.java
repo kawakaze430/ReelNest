@@ -132,10 +132,11 @@ public class PlaybackService {
         jdbc.queryForList("SELECT id FROM users WHERE id=? FOR UPDATE",UUID.class,user);
         Profile profile = requireProfile(user,request.profileId());
         Asset asset = eligibleAsset(request.titleId(),profile.child(),user);
+        // Count every session that media authorization still accepts. An old
+        // heartbeat alone does not invalidate its unexpired ten-minute lease.
         Integer active = jdbc.queryForObject("""
             SELECT COUNT(*) FROM playback_sessions
             WHERE user_id=? AND status='ACTIVE' AND expires_at>NOW()
-              AND last_heartbeat_at>NOW()-interval '2 minutes'
             """,Integer.class,user);
         if (active != null && active >= MAX_SESSIONS)
             throw new ResponseStatusException(HttpStatus.CONFLICT,"Two active streams already running");

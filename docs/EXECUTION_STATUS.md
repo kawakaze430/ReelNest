@@ -1,5 +1,15 @@
 # Current execution and integration status
 
+## Continuation: 25 October 2026
+
+The next execution pass continued from unchanged remote `main` at `4489fcf6`. It reproduced and repaired two additional backend defects on actual PostgreSQL: usable sessions with stale heartbeats bypassed the two-stream admission cap, and first-user provisioning could attempt an INSERT inside a read-only request transaction. All ten new PostgreSQL/Spring service tests passed after the repairs; the baseline had eight passes and two failures. Native Maven verification passed with 56 tests passed and 15 opt-in database/storage cases skipped. The ten focused PostgreSQL cases were run separately with no skips.
+
+Real two-account browser/API/PostgreSQL/Redis checks also passed for profile/PIN ownership, persisted denied PIN attempts, correct-PIN reset/deletion and atomic one-time device handoff. Test-owned profiles were removed. CI now includes these account checks and the real playback database regressions. Upload acceptance no longer waits for removed UI text; it checks the matching backend upload completion. Playback acceptance now requires private caption delivery/denials, positive independent-account media access and actual encoded traversal denials. Those full media additions remain unexecuted until MinIO is available. There were 86 passing focused Python regressions, plus successful actionlint and shell syntax checks.
+
+See [the continuation report](CONTINUATION_2026_10_25.md) for commands, before/after evidence and precise limitations. Existing frontend/Terraform/media component passes below were reused because their source did not change. No current remote Actions result or full G1 success is claimed. Network settings remain inactive for `cgr.dev` and `api.github.com`; G1–G5 and native device acceptance remain open.
+
+## Previous execution pass
+
 GitHub `kawakaze430/ReelNest`, branch `main`, remains canonical. This pass began on Build 28 commit `84a42f6abb3809926cae0ebce550b050f705fb76`, then safely reconciled newer upstream Build 37 `fcfd396` before pushing. New upstream rights/territory catalog eligibility, resumable uploads, advanced source features and V26/V27 migrations are preserved. Local evidence records that base SHA and the modified-worktree fingerprint. It is not evidence of a successful remote workflow on the subsequently pushed commit.
 
 ## Repairs

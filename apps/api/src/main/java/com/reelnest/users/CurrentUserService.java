@@ -5,15 +5,22 @@ import com.reelnest.privacy.IdentityTombstone;
 import org.springframework.jdbc.core.JdbcTemplate;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 @Service
 public class CurrentUserService {
     private final UserRepository users;
     private final JdbcTemplate jdbc;
-    public CurrentUserService(UserRepository users, JdbcTemplate jdbc) {
+    private final TransactionTemplate firstReadBootstrap;
+    public CurrentUserService(UserRepository users, JdbcTemplate jdbc, PlatformTransactionManager transactions) {
         this.users = users;
         this.jdbc = jdbc;
+        this.firstReadBootstrap = new TransactionTemplate(transactions);
+        this.firstReadBootstrap.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
     }
 
     @Transactional
@@ -23,6 +30,22 @@ public class CurrentUserService {
         if (email == null || email.isBlank()) email = subject + "@identity.invalid";
         var user = users.findByIdentitySubject(subject);
         if (user.isPresent()) return requireActive(user.get(), jwt);
+        if (TransactionSynchronizationManager.isCurrentTransactionReadOnly()) {
+            // A first authenticated GET can arrive before /me creates its local
+            // identity. Provision only that missing identity in a short write
+            // transaction; established users keep the caller's transaction and
+            // do not require a second pooled connection on every request.
+            String bootstrapEmail = email;
+            return firstReadBootstrap.execute(status -> provision(jwt, subject, bootstrapEmail));
+        }
+        return provision(jwt, subject, email);
+    }
+
+    private UserEntity provision(Jwt jwt, String subject, String email) {
+        // Recheck after suspending a read transaction: a concurrent request may
+        // already have provisioned or suspended this identity.
+        var existing = users.findByIdentitySubject(subject);
+        if (existing.isPresent()) return requireActive(existing.get(), jwt);
         Integer erased=jdbc.queryForObject(
             "SELECT COUNT(*) FROM identity_tombstones WHERE subject_digest=?",Integer.class,
             IdentityTombstone.digest(subject));

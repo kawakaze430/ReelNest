@@ -109,6 +109,18 @@ jobs:
               conn.execute('CREATE DATABASE reelnest_catalog_test')
           PY
           mvn --batch-mode --no-transfer-progress -Dtest=CatalogPostgresTest test
+      - name: Verify playback admission, first-user transactions and authorization on PostgreSQL
+        working-directory: apps/api
+        env:
+          REELNEST_SECURITY_DB_URL: jdbc:postgresql://127.0.0.1:5432/reelnest_security_test
+          REELNEST_DISPOSABLE_DB: 'true'
+        run: |
+          python3 - <<'PY'
+          import psycopg
+          with psycopg.connect('postgresql://reelnest:local_dev_only@127.0.0.1:5432/postgres',autocommit=True) as conn:
+              conn.execute('CREATE DATABASE reelnest_security_test')
+          PY
+          mvn --batch-mode --no-transfer-progress -Dtest=PlaybackPostgresSecurityTest test
       - name: Sanitize database-startup diagnostics
         if: always()
         run: |

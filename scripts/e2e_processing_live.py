@@ -5,14 +5,40 @@ from datetime import datetime, timedelta, timezone
 import hashlib
 import json
 import os
+import re
 import subprocess
 import uuid
 
-from playwright.async_api import async_playwright
 from live_e2e_helpers import API, FIXTURE, ROOT, WEB, chromium_launch_options, login, require_disposable_stack
 
 
+async def upload_original(creator, title_id, source):
+    """Drive the shipped upload form and require its scoped backend completion.
+
+    UI confirmation wording can change without changing the multipart contract.
+    A completed request must still belong to this title and original file before
+    the test proceeds to independently verify the worker's READY state.
+    """
+    await creator.locator('input[type="file"][accept*="video/mp4"]').set_input_files(str(source))
+    complete_url = re.compile(re.escape(API + f'/api/v1/creator/titles/{title_id}/uploads/')
+                              + r'[0-9a-fA-F-]{36}/complete')
+    async with creator.expect_response(
+            lambda response: response.request.method == 'POST'
+            and complete_url.fullmatch(response.url) is not None,
+            timeout=120000) as completed:
+        await creator.get_by_role('button', name='Upload securely', exact=True).click()
+    response = await completed.value
+    assert response.status == 200, f'Upload completion failed: HTTP {response.status}'
+    upload = await response.json()
+    assert upload.get('status') == 'COMPLETED', 'Upload did not complete in the backend'
+    assert upload.get('titleId') == title_id, 'Upload completion belongs to another title'
+    assert upload.get('filename') == source.name, 'Upload completion belongs to another file'
+    assert upload.get('expectedBytes') == source.stat().st_size, 'Upload completion byte count differs from the original'
+
+
 async def main():
+    from playwright.async_api import async_playwright
+
     require_disposable_stack()
     source = ROOT / 'apps/web/public/sample/demo.mp4'
     assert source.is_file() and source.stat().st_size > 0, 'Original generated sample is missing'
@@ -79,10 +105,7 @@ async def main():
             await creator.get_by_label('SRT subtitle file', exact=True).set_input_files(str(captions))
             await creator.get_by_role('button', name='Save subtitle track', exact=True).click()
             await creator.get_by_role('status').get_by_text('Caption source saved.').wait_for()
-            # The studio also contains a subtitle file input; select the video input explicitly.
-            await creator.locator('input[type="file"][accept*="video/mp4"]').set_input_files(str(source))
-            await creator.get_by_role('button', name='Upload securely', exact=True).click()
-            await creator.get_by_role('status').get_by_text('Source uploaded.').wait_for(timeout=120000)
+            await upload_original(creator, draft['id'], source)
             for _ in range(120):
                 media_response = await creator.request.get(API + f'/api/v1/creator/titles/{draft["id"]}/media', headers=headers)
                 assert media_response.status == 200, f'Media status failed: HTTP {media_response.status}'
@@ -111,6 +134,10 @@ async def main():
                 assert result.status in (401, 403), 'Private media bucket permitted anonymous access'
             fixture['status'] = 'PASS'
             FIXTURE.write_text(json.dumps(fixture, indent=2) + '\n')
+        except BaseException:
+            fixture['status'] = 'FAIL'
+            FIXTURE.write_text(json.dumps(fixture, indent=2) + '\n')
+            raise
         finally:
             await browser.close()
     print('PASS: creator browser login -> scoped approval -> original upload + captions -> worker READY -> rights review -> publish; storage stays private')

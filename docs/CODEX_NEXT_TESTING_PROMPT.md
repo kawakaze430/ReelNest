@@ -1,6 +1,6 @@
 # ReelNest: continue testing and fixing GitHub main
 
-Use this prompt for the next Codex execution session. GitHub `kawakaze430/ReelNest`, branch `main`, is the canonical source. Read `AGENTS.md`, `docs/EXECUTION_STATUS.md`, the latest numbered status/task ledger, `docs/REELNEST_MASTER_282_CHECKLIST.md`, `docs/REELNEST_TEST_EVIDENCE_AND_GATES.md`, and the current workflows before acting.
+Use this prompt for the next Codex execution session. GitHub `kawakaze430/ReelNest`, branch `main`, is the canonical source. Read `AGENTS.md`, `docs/EXECUTION_STATUS.md`, `docs/CONTINUATION_2026_10_25.md`, the latest numbered status/task ledger, `docs/REELNEST_MASTER_282_CHECKLIST.md`, `docs/REELNEST_TEST_EVIDENCE_AND_GATES.md`, and the current workflows before acting.
 
 Take ownership of the requested execution checks and their concrete failures. Finish independent work before reporting an external blocker. Do not infer production readiness from a successful build.
 
@@ -54,13 +54,16 @@ Verify all of the following with actual responses and browser behavior:
 - Every required image builds, each service starts, and Keycloak discovery, API, web and recommendation readiness succeed.
 - PostgreSQL has exactly V1–V27 in successful order. Verify clean migration and V9 → V27 upgrade/idempotency separately against disposable databases.
 - Real PKCE browser login works for two independent test accounts. Authenticated profiles work; anonymous requests, tampered JWTs and cross-account profile access are denied.
+- `e2e_account_security_live.py` proves profile/PIN ownership, persisted denial counters and correct-PIN reset/deletion against PostgreSQL, plus wrong-account/replay/deleted-profile denial and concurrent exactly-once Redis handoff. It must clean only its own test profiles. PIN protection here covers sensitive profile actions, not a universal playback challenge.
 - A uniquely named repository-owned synthetic film completes creator approval, rights declaration, private upload, caption upload, worker encoding, administrator rights review and publication. No copyrighted commercial asset or production data is used.
-- The newly processed title serves real private HLS playlists and segments. The shipped browser player decodes frames and advances playback time; downloaded bytes or an open port alone are insufficient.
+- The newly processed title serves real private HLS playlists, video segments and the uploaded original caption cue in WebVTT. Anonymous/cross-account caption access and encoded traversal probes are denied. The second account independently gets legal FREE media using its own profile. The shipped browser player decodes frames and advances playback time; downloaded bytes or an open port alone are insufficient.
 - Anonymous and cross-account media access, revoked sessions, stale progress writes and old application JWTs after global logout are denied. Resume/watchlist behavior and independent-account access still work.
 - Private source/processed buckets remain private. Caption, child-age, territory, entitlement, rights-expiry and path-traversal cases need explicit positive/negative evidence before broader security acceptance.
 - A logical backup restores into a uniquely owned scratch database and its selected row counts/migration history match. Cleanup must never drop a database that this run did not create.
 
 Development Compose retains the latest upstream Chainguard MinIO server/client images. Their pull requires `cgr.dev`, which is currently denied by this cloud proxy. A policy denial is an external prerequisite, not permission to bypass the proxy or disable verification. Verify exact image digests and both server/client startup; development floating tags do not establish production storage approval.
+
+The standalone PostgreSQL workflow also runs `PlaybackPostgresSecurityTest` against its dedicated loopback `reelnest_security_test` database. Preserve the fixes for first-user read-only identity provisioning and the two-stream cap. Real concurrent admissions, stale heartbeat versus expiry, ownership, rights/territory/age, unpaid premium, progress ordering, erasure/suspension and JWT-revocation cutoffs must continue to pass. Synthetic service metadata and a constructed JWT do not establish signature or media delivery acceptance.
 
 ## Additional client checks
 

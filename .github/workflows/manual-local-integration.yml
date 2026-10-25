@@ -102,7 +102,7 @@ jobs:
 
           lines = [f"## ReelNest G1 at `{os.environ['GITHUB_SHA']}`", '',
                    '| Evidence | Outcome |', '| --- | --- |']
-          for filename in ('cloud-g1-latest.json', 'local-stack-latest.json', 'live-smoke-latest.json', 'browser-identity-latest.json', 'playback-latest.json', 'restore-latest.json'):
+          for filename in ('cloud-g1-latest.json', 'local-stack-latest.json', 'live-smoke-latest.json', 'browser-identity-latest.json', 'account-security-latest.json', 'playback-latest.json', 'restore-latest.json'):
               path = Path('build-evidence') / filename
               if not path.exists():
                   outcome = 'NOT RUN / no completed report'
@@ -129,6 +129,7 @@ jobs:
             build-evidence/local-stack-latest.json
             build-evidence/live-smoke-latest.json
             build-evidence/browser-identity-latest.json
+            build-evidence/account-security-latest.json
             build-evidence/playback-latest.json
             build-evidence/processing-fixture.local.json
             build-evidence/restore-latest.json
