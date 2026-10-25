@@ -88,7 +88,7 @@ jobs:
         run: mvn --batch-mode --no-transfer-progress -DfailIfNoTests=true verify
       - name: Preserve actual JUnit results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: api-junit-${{ github.sha }}
           path: apps/api/target/surefire-reports/TEST-*.xml
@@ -231,7 +231,7 @@ jobs:
         run: python3 scripts/release_gate.py --mode offline --output build-evidence/release-offline.json
       - name: Upload evidence report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: release-offline-${{ github.sha }}
           path: build-evidence/release-offline.json
@@ -256,7 +256,7 @@ jobs:
           python3 -m pip install pytest
           python3 -m pytest tests/deployment -q
       - name: Upload preview for authorized manual AWS deployment
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: reelnest-amplify-preview
           path: deploy/reelnest-amplify-preview.zip
