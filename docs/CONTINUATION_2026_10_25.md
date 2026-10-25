@@ -23,6 +23,8 @@ Java commands used the prepared JDK 21/Maven environment and its verified proxy 
 | `pytest tests/handoff/test_playback_browser_contract.py -q` | 26 passed | 0 |
 | `pytest tests/handoff/test_account_security_safety.py -q` | 5 passed | 0 |
 | `pytest tests/handoff/test_ci_change_selection.py tests/handoff/test_live_stack_safety.py tests/release/test_build27_g1_contracts.py -q` | 48 passed | 0 |
+| `pytest tests/release/test_build12_contracts.py tests/release/test_build19_contracts.py -q` | 11 passed; audience compilation failed because the prepared JDK was not activated for this command | 1 |
+| `pytest tests/release/test_build19_contracts.py::test_audience_java -q` with JDK 21 on PATH | Previously failed check passed; all 12 identity/source checks now passed | 0 |
 | `build-evidence/actionlint/actionlint -shellcheck= -pyflakes=` | All four workflows parsed/validated; optional shellcheck/pyflakes unavailable | 0 |
 | `bash -n scripts/validate_local_stack.sh`; `git diff --check` | Passed | 0 each |
 | Existing frontend G0, Terraform, media/ML and V1–V27 migration evidence | Reused for unchanged sources; not rerun or claimed as new exact-SHA CI | n/a |
@@ -30,6 +32,8 @@ Java commands used the prepared JDK 21/Maven environment and its verified proxy 
 The account check uses real PKCE login for the separate demo and reviewer identities and actual API requests. It proves wrong-account PIN/profile actions fail, child adult-PIN setup is rejected, rejected PIN requests commit their attempt counters, correct verification resets them, and protected deletion persists. Actual Redis redemption proves wrong-account requests do not consume a code, concurrent redemption succeeds exactly once, replay/malformed codes fail, and deleted profiles cannot be selected. Invitations/selections are no-store and return no authentication credentials. SQL access in that check is read-only; profiles are created/deleted only through their authenticated API.
 
 Initial account attempts stopped before authentication because the native Next.js standalone server lacked current copied static assets and had cached its startup file list. Copying the documented standalone static/public assets and restarting only the task's server restored the JavaScript responses. No application change or relaxed authentication was used for that correction.
+
+The additional identity/source suite initially lacked `javac` on its command PATH. Activating the already-prepared JDK 21 and rerunning only that failed check passed; no compiler installation, source edit or passing-test repetition was required. Across the targeted suites, 98 distinct Python checks passed.
 
 ## Integration acceptance repairs
 
