@@ -41,6 +41,7 @@ def selected(paths, tmp_path, monkeypatch, event='push', base='a' * 40):
     'apps/web/src/components/protected-player.tsx',
     'apps/video-worker/Dockerfile',
     'apps/web/.dockerignore',
+    'apps/recommendation-api/main.py',
     'compose.yaml',
     'infrastructure/minio/Dockerfile',
     'infrastructure/keycloak/reelnest-realm.json',
@@ -68,6 +69,10 @@ def test_runtime_or_integration_change_enables_full_g1(path, tmp_path, monkeypat
     ['infrastructure/aws/services.tf'],
     ['composeXyaml', '.github/workflows/checksXyml'],
     ['archive/apps/api/Dockerfile', 'scripts/not_e2e.py'],
+    ['apps/mobile/android/app/src/main/AndroidManifest.xml'],
+    ['apps/mobile/ios/project.yml'],
+    ['apps/tv/shared/tv.js'],
+    ['.github/workflows/native-clients.yml'],
 ])
 def test_documentation_or_unrelated_change_avoids_duplicate_g1(paths, tmp_path, monkeypatch):
     output, calls = selected(paths, tmp_path, monkeypatch)

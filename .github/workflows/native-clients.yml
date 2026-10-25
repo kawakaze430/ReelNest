@@ -1,0 +1,144 @@
+name: Native catalog client compilation
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/mobile/**'
+      - '.github/workflows/native-clients.yml'
+      - 'tests/release/test_native_build_contract.py'
+  workflow_dispatch:
+    inputs:
+      apple_simulators:
+        description: Also compile unsigned iOS/tvOS simulator apps on a macOS runner (uses additional CI minutes)
+        type: boolean
+        default: false
+permissions:
+  contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+defaults:
+  run:
+    shell: bash
+jobs:
+  android:
+    name: Android debug, unsigned release and lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Install the pinned compile platform and AGP build tools
+        run: '"$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-35" "build-tools;34.0.0"'
+      - name: Record the actual native toolchain
+        run: |
+          mkdir -p build-evidence/native/android
+          java -version > build-evidence/native/android/java.txt 2>&1
+          gradle --version > build-evidence/native/android/gradle.txt
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --list_installed > build-evidence/native/android/sdk.txt
+      - name: Compile APKs and run real Android lint
+        id: compile
+        working-directory: apps/mobile/android
+        run: |
+          gradle --no-daemon --console=plain :app:assembleDebug :app:assembleRelease :app:lintDebug \
+            -PreelnestApiOrigin=https://api.example.org
+      - name: Summarize compilation scope
+        if: always()
+        env:
+          BUILD_OUTCOME: ${{ steps.compile.outcome }}
+        run: |
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          with Path(os.environ['GITHUB_STEP_SUMMARY']).open('a') as report:
+              report.write(f"Android compile/lint outcome: **{os.environ['BUILD_OUTCOME']}** at `{os.environ['GITHUB_SHA']}`.\n\n")
+              report.write('The debug APK uses an ephemeral development signature; the release APK has no production signing configuration. No app was installed or published. Compilation does not verify device navigation, authentication, protected playback, DRM or store acceptance.\n')
+          PY
+      - name: Retain native compilation and lint evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-catalog-${{ github.sha }}
+          path: |
+            build-evidence/native/android/
+            apps/mobile/android/app/build/reports/lint-results-debug.*
+            apps/mobile/android/app/build/outputs/apk/debug/*.apk
+            apps/mobile/android/app/build/outputs/apk/release/*-unsigned.apk
+          if-no-files-found: warn
+          retention-days: 7
+  apple:
+    name: Optional unsigned iOS and tvOS simulator compilation
+    if: github.event_name == 'workflow_dispatch' && inputs.apple_simulators
+    runs-on: macos-15
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install checksum-pinned XcodeGen 2.44.1
+        run: |
+          archive="$RUNNER_TEMP/xcodegen-2.44.1.zip"
+          curl --fail --silent --show-error --location \
+            https://github.com/yonaskolb/XcodeGen/releases/download/2.44.1/xcodegen.zip --output "$archive"
+          printf '%s  %s\n' a2e905fb68446e9bb4008cdfe2e13e3f176d0cbcca828b71770f8e53fca91b73 "$archive" | shasum -a 256 -c -
+          unzip -q "$archive" -d "$RUNNER_TEMP/reelnest-xcodegen"
+          chmod +x "$RUNNER_TEMP/reelnest-xcodegen/xcodegen/bin/xcodegen"
+          printf '%s\n' "$RUNNER_TEMP/reelnest-xcodegen/xcodegen/bin" >> "$GITHUB_PATH"
+      - name: Record the installed Xcode and SDKs
+        run: |
+          mkdir -p build-evidence/native/apple
+          xcodebuild -version > build-evidence/native/apple/xcode.txt
+          xcodebuild -showsdks > build-evidence/native/apple/sdks.txt
+          xcodegen --version > build-evidence/native/apple/xcodegen.txt
+      - name: Generate the real Xcode project
+        working-directory: apps/mobile/ios
+        run: xcodegen generate --spec project.yml
+      - name: Compile iOS and tvOS simulator applications without signing
+        id: compile
+        working-directory: apps/mobile/ios
+        run: |
+          xcodebuild -project ReelNestCatalogPreview.xcodeproj -scheme ReelNestCatalogPreview \
+            -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build/ios CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY='' \
+            build | tee "$GITHUB_WORKSPACE/build-evidence/native/apple/ios-build.log"
+          xcodebuild -project ReelNestCatalogPreview.xcodeproj -scheme ReelNestTVPreview \
+            -configuration Debug -sdk appletvsimulator -destination 'generic/platform=tvOS Simulator' \
+            -derivedDataPath build/tvos CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY='' \
+            build | tee "$GITHUB_WORKSPACE/build-evidence/native/apple/tvos-build.log"
+          python3 - <<'PY'
+          import plistlib
+          from pathlib import Path
+          for platform, product, sdk in (
+              ('ios', 'ReelNestCatalogPreview', 'iphonesimulator'),
+              ('tvos', 'ReelNestTVPreview', 'appletvsimulator'),
+          ):
+              path = Path(f'build/{platform}/Build/Products/Debug-{sdk}/{product}.app/Info.plist')
+              with path.open('rb') as source:
+                  info = plistlib.load(source)
+              assert info['ReelNestAPIOrigin'] == 'https://api.example.org'
+              assert info['CFBundleURLTypes'][0]['CFBundleURLSchemes'] == ['reelnest-preview']
+          PY
+      - name: Summarize simulator-only scope
+        if: always()
+        env:
+          BUILD_OUTCOME: ${{ steps.compile.outcome }}
+        run: |
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          with Path(os.environ['GITHUB_STEP_SUMMARY']).open('a') as report:
+              report.write(f"Unsigned Apple simulator compile/plist outcome: **{os.environ['BUILD_OUTCOME']}** at `{os.environ['GITHUB_SHA']}`.\n\n")
+              report.write('No developer certificates, device installation, simulator interaction, private playback, DRM or store publication were exercised. The placeholder API origin keeps catalog network access disabled in the generated apps.\n')
+          PY
+      - name: Retain Apple compiler and SDK diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: apple-catalog-${{ github.sha }}
+          path: build-evidence/native/apple/
+          if-no-files-found: warn
+          retention-days: 7

@@ -4,17 +4,60 @@ These are the first **functional read-only catalog clients** for Android/Android
 and iOS/tvOS. They do NOT implement protected OTT playback, device authentication,
 CDM / FairPlay licences, offline viewing, or payment.
 
-Android: install JDK 17 and Android SDK, then use Gradle from `apps/mobile/android`:
-`gradle :app:assembleDebug -PreelnestApiOrigin=https://api.your-approved-domain.example`.
-This includes touch and focusable D-pad catalog items for TV shells. Android Gradle
-Plugin 8.7.3 and Kotlin 2.0.21 are pinned, but the APK has **not** been built or
-tested on a TV or Android handset in this handoff.
+Android requires JDK **17**, Gradle **8.9**, Android platform **35** and AGP's
+build tools **34.0.0**. Android Gradle Plugin 8.7.3 and Kotlin 2.0.21 are pinned.
+From `apps/mobile/android`, run:
 
-iOS / tvOS: install Xcode and XcodeGen on a macOS development host; from
-`apps/mobile/ios`, run `xcodegen generate` and then build the
-`ReelNestCatalogPreview` or `ReelNestTVPreview` scheme in Xcode. Replace the
-`ReelNestAPIOrigin` Info.plist build setting with an approved HTTPS origin.
-Neither Xcode build, device signing nor App Store/TestFlight review occurred.
+```bash
+gradle --no-daemon --console=plain :app:assembleDebug :app:assembleRelease :app:lintDebug \
+  -PreelnestApiOrigin=https://api.example.org
+```
+
+The placeholder origin deliberately disables catalog network requests. Replace it
+with a reviewed real HTTPS origin only for authorized functional testing. The
+debug APK uses a generated development signature; the release APK is unsigned
+because no release signing configuration is provided. This compiles touch and
+focusable D-pad catalog UI, not a protected TV player. The launcher has original
+banner artwork and explicitly makes touchscreen hardware optional; these satisfy
+Android TV manifest lint requirements without suppressions.
+
+iOS / tvOS requires Xcode and XcodeGen **2.44.1** on macOS. From
+`apps/mobile/ios`, run `xcodegen generate --spec project.yml`, then:
+
+```bash
+xcodebuild -project ReelNestCatalogPreview.xcodeproj -scheme ReelNestCatalogPreview \
+  -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
+  -derivedDataPath build/ios CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY='' build
+xcodebuild -project ReelNestCatalogPreview.xcodeproj -scheme ReelNestTVPreview \
+  -configuration Debug -sdk appletvsimulator -destination 'generic/platform=tvOS Simulator' \
+  -derivedDataPath build/tvos CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY='' build
+```
+
+The project uses Swift language mode **5.0**, not compiler-release number 5.9.
+XcodeGen creates typed Info.plist properties, including the catalog URL-scheme
+array. Its placeholder `ReelNestAPIOrigin` can be replaced in the two target
+`info.properties` dictionaries for authorized testing. Generated project,
+Info.plist and build outputs are local artifacts; do not commit them.
+
+## Hosted native compilation
+
+`.github/workflows/native-clients.yml` runs Android APK compilation and real lint
+on `main` changes to the mobile source or workflow. It pins the Gradle/JDK/SDK
+requirements above and retains compiler/lint reports and APK artifacts for seven
+days. A debug APK signature is not production signing or installation evidence.
+
+Unsigned iOS/tvOS simulator compilation is available only by manually dispatching
+that workflow with `apple_simulators=true` (default **false**). It uses one macOS
+runner, checksum-pinned XcodeGen 2.44.1, records the installed Xcode/SDK versions,
+and checks both actual built app plists. It consumes additional private CI
+minutes; no Apple job is automatically dispatched. No developer account,
+certificate, provisioning profile, device installation or store upload is used.
+
+These jobs are configured but their native build results have **not** been
+observed from this managed Linux environment: Android tooling/Xcode are absent,
+and GitHub API observation remains blocked. Configuration/source checks do not
+prove successful native compilation. Inspect exact-commit job results before
+claiming either platform passed.
 
 All clients consume only `GET /api/v1/catalog` with no credentials. They never
 use private manifests, reuse browser bearer tokens, or pretend that a public

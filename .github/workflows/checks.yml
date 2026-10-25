@@ -54,7 +54,8 @@ jobs:
               required = True
           else:
               files = subprocess.check_output(['git', 'diff', '--name-only', base, 'HEAD'], text=True).splitlines()
-              prefixes = ('apps/', 'infrastructure/keycloak/', 'infrastructure/minio/', 'scripts/e2e_')
+              prefixes = ('apps/api/', 'apps/web/', 'apps/video-worker/', 'apps/recommendation-api/',
+                          'infrastructure/keycloak/', 'infrastructure/minio/', 'scripts/e2e_')
               exact_paths = {
                   'compose.yaml',
                   'scripts/live_smoke.py',
@@ -211,7 +212,7 @@ jobs:
       - name: Run human subtitle translation QA regression
         run: node scripts/test_build32_translation.mjs
       - name: Check native catalog source package contracts
-        run: python3 -m pytest tests/release/test_build34_mobile_preview.py -q
+        run: python3 -m pytest tests/release/test_build34_mobile_preview.py tests/release/test_native_build_contract.py -q
       - name: Verify Build37 watermark/live preview contracts and task preservation
         run: python3 -m pytest tests/release/test_build37_status.py -q
       - name: Verify Build36 contextual AVOD preview and native privacy guards

@@ -244,8 +244,21 @@ def handle(job, s3):
     try:
         with connection() as conn:
             with conn.transaction():
+                # A delayed claimant may resume after a replacement has already
+                # published READY. Lock the job first (the same order used by
+                # success/failure) and verify this exact live claim before
+                # changing media state or beginning pipeline/storage work.
+                lease = conn.execute("""
+                    SELECT media_asset_id FROM media_processing_jobs
+                    WHERE id=%s AND media_asset_id=%s AND attempts=%s
+                      AND worker_id=%s AND state='RUNNING' AND lease_until>NOW()
+                    FOR UPDATE
+                """, (job["id"],job["media_asset_id"],job["attempts"],WORKER_ID)).fetchone()
+                if lease is None:
+                    log.warning("Lease lost; refusing PROCESSING transition for %s", job["id"])
+                    return
                 conn.execute("UPDATE media_assets SET processing_status='PROCESSING' WHERE id=%s",
-                             (job["media_asset_id"],))
+                             (lease["media_asset_id"],))
         manifest, duration, variants = process_job(job,s3)
         if lost.is_set():
             raise RuntimeError("Processing lease heartbeat was lost; retry safely")

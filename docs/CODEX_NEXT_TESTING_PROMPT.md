@@ -1,6 +1,6 @@
 # ReelNest: continue testing and fixing GitHub main
 
-Use this prompt for the next Codex execution session. GitHub `kawakaze430/ReelNest`, branch `main`, is the canonical source. Read `AGENTS.md`, `docs/EXECUTION_STATUS.md`, `docs/CONTINUATION_2026_10_25.md`, the latest numbered status/task ledger, `docs/REELNEST_MASTER_282_CHECKLIST.md`, `docs/REELNEST_TEST_EVIDENCE_AND_GATES.md`, and the current workflows before acting.
+Use this prompt for the next Codex execution session. GitHub `kawakaze430/ReelNest`, branch `main`, is the canonical source. Read `AGENTS.md`, `docs/EXECUTION_STATUS.md`, `docs/OWNER_ACTIONS_TO_UNBLOCK.md`, `docs/BLOCKER_RESOLUTION_2026_10_25.md`, `docs/CONTINUATION_2026_10_25.md`, the latest numbered status/task ledger, `docs/REELNEST_MASTER_282_CHECKLIST.md`, `docs/REELNEST_TEST_EVIDENCE_AND_GATES.md`, and the current workflows before acting.
 
 Take ownership of the requested execution checks and their concrete failures. Finish independent work before reporting an external blocker. Do not infer production readiness from a successful build.
 
@@ -65,9 +65,11 @@ Development Compose retains the latest upstream Chainguard MinIO server/client i
 
 The standalone PostgreSQL workflow also runs `PlaybackPostgresSecurityTest` against its dedicated loopback `reelnest_security_test` database. Preserve the fixes for first-user read-only identity provisioning and the two-stream cap. Real concurrent admissions, stale heartbeat versus expiry, ownership, rights/territory/age, unpaid premium, progress ordering, erasure/suspension and JWT-revocation cutoffs must continue to pass. Synthetic service metadata and a constructed JWT do not establish signature or media delivery acceptance.
 
+The same workflow separately runs `test_worker_postgres.py` with `REELNEST_DISPOSABLE_DB=true` and loopback `WORKER_TEST_DB_DSN` naming only `reelnest_worker_test`. Preserve the initial handle lease fence: a stale worker must not change newer READY media or invoke the pipeline. Concurrent claims, progress/failure/success ownership and retry behavior require actual PostgreSQL checks. Stubbing the pipeline in a lease test does not clear actual encoding/storage acceptance.
+
 ## Additional client checks
 
-Run the existing TV Node tests and packaging checks. Native Android/iOS source guards do not prove a Gradle/Xcode build, signed installation, DRM or device playback. Use each client README for real compilation when the required SDK/authorized runner is available, and report unsupported platforms as NOT RUN rather than substituting source checks. Inspect the master 282-task evidence/gate audit for the remaining named tests; preserve its historical acceptance flags.
+Inspect the path-scoped `Native catalog client compilation` job for the exact SHA. Android debug/unsigned-release compilation and real lint run automatically. Apple unsigned simulator compilation requires explicit manual `apple_simulators=true`; it consumes additional macOS CI minutes and should not be started automatically. Read `apps/mobile/README.md` for exact tool versions and commands. Native source guards do not prove SDK compilation, signed installation, DRM or device playback. Reuse unchanged passing TV Node/packaging results and preserve historical acceptance flags.
 
 ## Remaining release gates
 

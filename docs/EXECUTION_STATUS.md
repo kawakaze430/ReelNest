@@ -1,5 +1,13 @@
 # Current execution and integration status
 
+## Blocker review: 25 October 2026
+
+The latest pass continued from `c7a81eb2`. A real PostgreSQL regression reproduced a stale media worker changing a replacement worker's completed READY asset back to PROCESSING. The worker now validates and locks its exact live claim before changing media state or starting pipeline work. Nine actual PostgreSQL claim/lease/state tests passed after repair, with fixtures cleaned. A dedicated CI stage now runs these cases.
+
+Native build configuration now uses a valid Swift language mode and typed generated URL-scheme plists. Android TV has the banner and optional-touchscreen declarations required by its lint rules. A new path-scoped workflow builds Android debug/unsigned-release APKs and runs lint; unsigned Apple simulator compilation is a manual opt-in. Nine native configuration/source checks and 32 change-selection checks passed. All five workflows pass actionlint. Native compilation itself remains unobserved; source/configuration checks are not SDK execution. Native-only changes no longer request unrelated full Docker G1.
+
+The cloud draft was saved again with only the two currently required explicit hosts, `cgr.dev` and `api.github.com`, preserving package-manager presets, installation instructions and main-only startup guidance. The obsolete optional Go-fallback storage host was removed. The save returned `requires_publish=true`; it did not apply or publish the rules. **The next external action is review/save/publication in environment settings.** See [exact owner actions](OWNER_ACTIONS_TO_UNBLOCK.md) and [the latest repair evidence](BLOCKER_RESOLUTION_2026_10_25.md). Full G1 and the external release gates remain unaccepted.
+
 ## Continuation: 25 October 2026
 
 The next execution pass continued from unchanged remote `main` at `4489fcf6`. It reproduced and repaired two additional backend defects on actual PostgreSQL: usable sessions with stale heartbeats bypassed the two-stream admission cap, and first-user provisioning could attempt an INSERT inside a read-only request transaction. All ten new PostgreSQL/Spring service tests passed after the repairs; the baseline had eight passes and two failures. Native Maven verification passed with 56 tests passed and 15 opt-in database/storage cases skipped. The ten focused PostgreSQL cases were run separately with no skips.
@@ -58,7 +66,7 @@ Full acceptance requires exact-source G0 proof and an isolated, uniquely named d
 
 **Remote CI observation is BLOCKED:** `gh run list` cannot connect to `api.github.com` through the current proxy. Git fetch/push can work independently. A pushed workflow is configured to execute, not a claimed successful remote run.
 
-The cloud configuration draft preserves existing network presets, includes the required `api.github.com` and `cgr.dev` access (and retains the earlier optional `storage.googleapis.com` request), and saves tested install/start instructions. Review/save those environment settings and publish to activate them; a draft save does not apply networking or publish. Retry the denied operations after activation. GitHub-hosted CI has its own network policy and may independently complete the automatic G1 job.
+The cloud configuration draft preserves existing network presets, includes the required `api.github.com` and `cgr.dev` access, and saves tested install/start instructions. The later blocker pass removed the unused optional `storage.googleapis.com` request. Review/save those environment settings and publish; a draft save does not apply networking or publish. Retry the denied operations after the observed runtime changes. GitHub-hosted CI has its own network policy and may independently complete the automatic G1 job.
 
 G2 payment/provider verification, G3 AWS staging/CDN, G4 independent security/load/recovery/legal approval and G5 licensed territorial launch remain open. No financial transaction, deployment, DNS change or production database operation was performed. **Production readiness is not established.**
 

@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'apps/api/**'
+      - 'apps/video-worker/**'
       - 'scripts/verify_flyway_postgres.py'
       - 'tests/release/test_build27_flyway_contract.py'
       - '.github/workflows/postgres-flyway.yml'
@@ -121,6 +122,24 @@ jobs:
               conn.execute('CREATE DATABASE reelnest_security_test')
           PY
           mvn --batch-mode --no-transfer-progress -Dtest=PlaybackPostgresSecurityTest test
+      - name: Verify actual media-worker claim and lease SQL on a separate database
+        env:
+          WORKER_TEST_DB_DSN: postgresql://reelnest:local_dev_only@127.0.0.1:5432/reelnest_worker_test
+          REELNEST_DISPOSABLE_DB: 'true'
+          POSTGRES_CONTAINER: ${{ job.services.postgres.id }}
+        run: |
+          set -Eeuo pipefail
+          python3 -m pip install -r apps/video-worker/requirements.txt
+          python3 - <<'PY'
+          import psycopg
+          with psycopg.connect('postgresql://reelnest:local_dev_only@127.0.0.1:5432/postgres',autocommit=True) as conn:
+              conn.execute('CREATE DATABASE reelnest_worker_test')
+          PY
+          # Copy schema only, without catalog data or unrelated queued jobs.
+          # Use the service's own pg_dump/psql version, matching PostgreSQL 17.
+          docker exec "$POSTGRES_CONTAINER" pg_dump --schema-only --no-owner --no-acl -U reelnest -d reelnest |
+            docker exec -i "$POSTGRES_CONTAINER" psql -v ON_ERROR_STOP=1 -U reelnest -d reelnest_worker_test
+          python3 -m pytest apps/video-worker/tests/test_worker_postgres.py -q --junitxml=build-evidence/worker-postgres.xml
       - name: Sanitize database-startup diagnostics
         if: always()
         run: |
@@ -134,6 +153,7 @@ jobs:
           name: postgres-flyway-${{ github.sha }}
           path: |
             build-evidence/g1-db-startup.sanitized.log
+            build-evidence/worker-postgres.xml
             apps/api/target/surefire-reports/TEST-*.xml
           if-no-files-found: warn
           retention-days: 14
