@@ -67,6 +67,27 @@ async def upload_original(creator, title_id, source):
     assert upload.get('expectedBytes') == source.stat().st_size, 'Upload completion byte count differs from the original'
 
 
+async def publish_original(reviewer, film, title_id, title_name):
+    """Require the title's actual publish response, UI success and public state."""
+    require_disposable_stack()
+    title_id = str(uuid.UUID(title_id))
+    publish_url = API + f'/api/v1/admin/titles/{title_id}/publish'
+    async with reviewer.expect_response(
+            lambda response: response.request.method == 'POST' and response.url == publish_url,
+            timeout=20000) as completed:
+        await film.get_by_role('button', name='Attempt publish', exact=True).click()
+    response = await completed.value
+    assert response.status == 204, f'Title publication failed: HTTP {response.status}'
+    # The actual moderator console must also consume the response successfully.
+    await reviewer.get_by_role('status').get_by_text('Title published.').wait_for(timeout=20000)
+    published = await reviewer.request.get(API + f'/api/v1/catalog/{title_id}')
+    assert published.status == 200, f'Published title unavailable in public catalog: HTTP {published.status}'
+    title = await published.json()
+    assert title.get('id') == title_id and title.get('name') == title_name, 'Published catalog response belongs to another title'
+    return {'publishStatus': response.status, 'catalogStatus': published.status,
+            'titleId': title_id, 'publishedTitleVerified': True}
+
+
 async def main():
     from playwright.async_api import async_playwright
 
@@ -160,8 +181,7 @@ async def main():
             await film.get_by_label('Review note', exact=True).fill('Verified repository-owned original generated test media and rights declaration.')
             await film.get_by_role('button', name='Approve rights', exact=True).click()
             await reviewer.get_by_role('status').get_by_text('Rights approved.').wait_for()
-            await film.get_by_role('button', name='Attempt publish', exact=True).click()
-            await reviewer.get_by_role('status').get_by_text('Title published.').wait_for(timeout=20000)
+            fixture['publication'] = await publish_original(reviewer, film, draft['id'], title_name)
             for bucket in ('reelnest-source-private', 'reelnest-processed-private'):
                 result = await creator.request.get('http://localhost:9000/' + bucket + '/')
                 assert result.status in (401, 403), 'Private media bucket permitted anonymous access'

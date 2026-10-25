@@ -1,40 +1,22 @@
-# Actions that unblock the remaining release work
+# Owner inputs and remaining acceptance work
 
-GitHub `kawakaze430/ReelNest`, branch `main`, is canonical. Continue without new branches, worktrees or PRs; reconcile newer commits and push normally. Do not force-push or treat a passing component check as complete commercial acceptance.
+GitHub `kawakaze430/ReelNest`, branch `main`, is canonical. Work directly on main, reconcile newer commits and push normally. Do not create branches, worktrees or PRs, force-push, or treat component checks as complete acceptance.
 
-## Current Git write-access blocker: 26 October 2026
+## Access restored: 26 October 2026
 
-The current environment can fetch private `main` and read GitHub API metadata through platform-injected authentication, but normal `git push origin main` now receives **HTTP 401** before credential prompting. This is an authentication failure, not an observed branch-protection rejection. The last verified remote SHA is `d4ae145a5b3c79104e623957ee2856ce2ab87265`. Reviewed CI diagnostic repairs are committed locally at `aa886918a07f12d50acb9a22342f23bd111b0e93`; they are **not pushed**, so their remote integration result is NOT RUN.
+Runtime revision **7** now contains the prepared download rules. Actual MinIO server/client pulls and GitHub log/artifact downloads succeeded. Normal `git push origin main` succeeded, publishing all three pending commits through `a534c48c2cb8fcf366af334c835be088421c0dc6`. The earlier write-authentication and download-host blockers are resolved; no additional access-settings action is currently required.
 
-Restore the environment's repository write authentication through its GitHub/repository connection settings. Do not paste a token into chat or replace platform-held credentials. After the connection is restored, fetch `main`, reconcile any newer commits safely and push normally; then inspect the resulting CI annotations. An exact patch is retained under ignored `build-evidence/reelnest-main-verification.patch` for integration if this cloud checkout cannot push.
+The downloaded old G1 evidence confirmed that unsupported `mc cors set` caused initialization failure. Its removal is already published. At `a534c48`, all nine component jobs, PostgreSQL checks and Android compilation/lint passed. Full integration advanced through startup, V1–V27, browser identity, account security, real CORS, captions, multipart upload, worker READY and rights approval, then failed at publication confirmation.
 
-The subsequent production-readiness request also produced local caption-upload and developer MinIO initializer repairs, with real Maven and FFmpeg regressions passing. The cumulative patch includes those changes and explicit live CORS acceptance. They remain unpublished under the same write-access blocker; no new branch or PR was created. Full integration and production release gates remain unaccepted.
+The concrete cause was an empty HTTP 200 publication response: the frontend parsed it as JSON and reported an error after the backend published the title. The focused repair returns HTTP 204 for publication and three identical admin actions, preserving their existing guards. Regression tests and full Maven verification pass; the next automatic CI run must verify the repaired complete workflow, playback and restore. Inspect current main and actual run results before any further dispatch.
 
-## Current action: save the additional download destinations
+## Technical scope and deferred legal acceptance
 
-The first settings update succeeded: runtime revision 2 allows `cgr.dev` and `api.github.com`. GitHub API access works, and exact-commit Android, PostgreSQL and component job results have been verified. The registry index works too. Actual downloads redirect to additional storage hosts, which remain denied. The prepared follow-up draft retains the two working rules and package-manager presets and adds the observed download destinations. Agent tools can save this draft but cannot apply or publish it.
+The owner has explicitly deferred **legal acceptance**. Keep it pending; do not invent approval or weaken rights controls. Continue technical checks using only original synthetic media, disposable databases and test accounts.
 
-Open this ReelNest cloud environment's settings, review its prepared configuration and save these hostname rules:
+A separate real Keycloak/PostgreSQL free-viewer erasure probe passed 17 checks with complete fixture cleanup. That component result does not establish billing/creator retention, all external processors, production MFA/email, backup retention, or legal acceptance.
 
-| Hostname | Operation/status |
-| --- | --- |
-| `cgr.dev` | Working registry manifests/authentication; retain this rule |
-| `api.github.com` | Working GitHub run/job metadata; retain this rule |
-| `9236a389bd48b984df91adc1bc924620.r2.cloudflarestorage.com` | Actual MinIO server/client image blobs; registry redirects were observed for both images |
-| `results-receiver.actions.githubusercontent.com` | Download the failing integration job's logs to diagnose its actual error |
-| `*.blob.core.windows.net` | GitHub Actions artifact archives use rotating Azure storage accounts; accounts 11, 13 and 16 were observed |
-
-Do not paste tokens, passwords, signed download links or secret files into chat. Git fetch and normal GitHub API reads work; Git push has the separate HTTP 401 blocker above. Additional credentials cannot fix destination-policy denials.
-
-User-facing configuration save can request a runtime update. Publication is separate: it creates an active reusable environment version/snapshot. Neither an agent draft save nor a general instruction to continue applies network rules. After saving, continue this task so the agent can inspect the observed configuration and retry the affected operations. Publish the prepared environment through the product when it is ready for reuse; do not confuse publication with a verified integration test.
-
-## Then finish the actual full media gate
-
-The pushed workflows already automate G0 and disposable G1 for relevant changes. Once API access works, inspect the existing run for the current `main` SHA before starting another. A browser can also open [repository Actions](https://github.com/kawakaze430/ReelNest/actions). An unobserved job is not a passed or failed job.
-
-G1 must prove original upload, captions, worker encoding, rights review, publication, authorized private media, actual decoded browser frames/time, two-account isolation, revocation, traversal rejection and logical restore. All these steps must use a unique disposable project and synthetic accounts/media. The [testing prompt](CODEX_NEXT_TESTING_PROMPT.md) contains the commands and acceptance criteria.
-
-No replacement storage implementation, proxy bypass, manual production-data change or skipped assertion can substitute for this test.
+The technical inputs below remain necessary for external verification. Existing instructions still prohibit financial transactions, billable cloud deployment and production data operations in this task. Complete reviewable preparation before seeking any later authorization. Current commands and criteria are in [the main-only testing prompt](CODEX_NEXT_TESTING_PROMPT.md).
 
 ## External release gates require named prerequisites
 

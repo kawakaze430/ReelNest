@@ -30,6 +30,7 @@ import subprocess
 import sys
 import time
 import uuid
+from urllib.parse import unquote_plus
 
 ROOT = Path(__file__).resolve().parents[1]
 EVIDENCE = ROOT / "build-evidence"
@@ -55,6 +56,16 @@ ASSIGNMENT = re.compile(
 )
 
 
+def _redact_oauth_callback_query(match: re.Match) -> str:
+    fields = []
+    for field in match.group("query").split("&"):
+        key, separator, _ = field.partition("=")
+        if separator and unquote_plus(key).casefold() in {"code", "state", "session_state"}:
+            field = key + "=[REDACTED]"
+        fields.append(field)
+    return match.group("callback") + "&".join(fields)
+
+
 def redact(text: str) -> str:
     """Remove common credential forms before stdout, reports or artifacts are written."""
     text = re.sub(r"-----BEGIN [^-]*PRIVATE KEY-----.*?-----END [^-]*PRIVATE KEY-----",
@@ -63,6 +74,10 @@ def redact(text: str) -> str:
                   r"\1[REDACTED]", text)
     text = re.sub(r"(?i)(\bBearer\s+)[A-Za-z0-9._~+/=-]+", r"\1[REDACTED]", text)
     text = re.sub(r"([a-zA-Z][a-zA-Z0-9+.-]*://)[^/\s@]+@", r"\1[REDACTED]@", text)
+    # Next's request logs include the OIDC callback URL. Its one-time code and
+    # correlation values are credentials; unrelated diagnostic codes are not.
+    text = re.sub(r"(?P<callback>/auth/callback/?\?)(?P<query>[^\s\"'<>#\\]*)",
+                  _redact_oauth_callback_query, text, flags=re.IGNORECASE)
     text = re.sub(
         r"(?i)([?&](?:sig|[^=&\s]*(?:password|token|secret|signature|credential|api[_-]?key|access[_-]?(?:key|id))[^=&\s]*)=)[^&#\s]+",
         r"\1[REDACTED]", text,

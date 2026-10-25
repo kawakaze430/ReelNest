@@ -69,6 +69,7 @@ public class AdminController {
     /** Explicit SEO approval never bypasses the live rights/READY checks in PublicSeoController. */
     public record SeoApproval(boolean approved) {}
     @PostMapping("/titles/{titleId}/seo-approval")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
     @Transactional
     public void approveSeo(@AuthenticationPrincipal Jwt jwt,@PathVariable UUID titleId,
                            @Valid @RequestBody SeoApproval input) {
@@ -125,6 +126,7 @@ public class AdminController {
             """,titleId);
     }
     @PostMapping("/titles/{titleId}/media/{assetId}/retry")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
     @Transactional
     public void retryMedia(@AuthenticationPrincipal Jwt jwt,@PathVariable UUID titleId,
                            @PathVariable UUID assetId) {
@@ -195,6 +197,7 @@ public class AdminController {
 
     public record Reject(@NotBlank @Size(max = 1000) String note) {}
     @PostMapping("/titles/{titleId}/reject")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
     @Transactional
     public void reject(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID titleId,
                        @Valid @RequestBody Reject input) {
@@ -207,6 +210,7 @@ public class AdminController {
     }
 
     @PostMapping("/titles/{titleId}/publish")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
     @Transactional
     public void publish(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID titleId) {
         var title = titles.findById(titleId)

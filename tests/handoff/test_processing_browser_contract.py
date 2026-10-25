@@ -16,6 +16,8 @@ TITLE = 'a37fe46a-1111-4111-8111-b390e53b71e9'
 UPLOAD = 'b37fe46a-2222-4222-8222-b390e53b71e9'
 API = 'http://localhost:8080'
 COMPLETE = f'{API}/api/v1/creator/titles/{TITLE}/uploads/{UPLOAD}/complete'
+PUBLISH = f'{API}/api/v1/admin/titles/{TITLE}/publish'
+TITLE_NAME = 'Original Worker Integration synthetic-fixture'
 
 
 @pytest.fixture
@@ -200,3 +202,113 @@ def test_local_cors_refuses_unconfirmed_stack_before_any_request(processing, mon
     with pytest.raises(RuntimeError, match='BLOCKED'):
         asyncio.run(processing.verify_local_upload_cors(request))
     assert not request.calls
+
+
+class PublicationPage:
+    def __init__(self, responses, *, catalog_status=200, catalog_patch=None, ui_success=True):
+        self.responses = responses
+        self.catalog_status = catalog_status
+        self.catalog_title = {'id': TITLE, 'name': TITLE_NAME, **(catalog_patch or {})}
+        self.ui_success = ui_success
+        self.response_listener = None
+        self.clicked = False
+        self.confirmed = False
+        self.request = self
+        self.catalog_calls = []
+
+    def expect_response(self, predicate, *, timeout):
+        assert timeout == 20000
+        page = self
+        class PendingResponse:
+            async def __aenter__(self):
+                self.value = asyncio.get_running_loop().create_future()
+                page.response_listener = (predicate, self.value)
+                return self
+            async def __aexit__(self, exc_type, exc, traceback):
+                if exc_type is None:
+                    assert self.value.done(), 'No scoped title publication response was observed'
+                page.response_listener = None
+        return PendingResponse()
+
+    def get_by_role(self, role, *, name=None, exact=False):
+        assert (role, name, exact) in [('button', 'Attempt publish', True), ('status', None, False)]
+        return self
+
+    async def click(self):
+        assert self.response_listener, 'Listen before the console publishes'
+        self.clicked = True
+        predicate, future = self.response_listener
+        for response in self.responses:
+            if predicate(response):
+                future.set_result(response)
+                break
+
+    def get_by_text(self, text):
+        assert text == 'Title published.'
+        return self
+
+    async def wait_for(self, *, timeout):
+        assert timeout == 20000
+        assert self.ui_success, 'The moderator console did not confirm publication'
+        self.confirmed = True
+
+    async def get(self, url):
+        assert self.confirmed, 'UI confirmation remains required before catalog verification'
+        assert url == f'{API}/api/v1/catalog/{TITLE}'
+        self.catalog_calls.append(url)
+        return Response(self.catalog_title, status=self.catalog_status)
+
+
+def test_publication_requires_scoped_no_content_response_ui_and_matching_public_title(processing, disposable):
+    page = PublicationPage([
+        Response({}, url=PUBLISH, method='GET', status=204),
+        Response({}, url=PUBLISH.replace(TITLE, UPLOAD), status=204),
+        Response({}, url=PUBLISH.replace(API, 'https://outside.invalid'), status=204),
+        Response({}, url=PUBLISH + '?other=1', status=204),
+        Response({}, url=PUBLISH, status=204),
+    ])
+    result = asyncio.run(processing.publish_original(page, page, TITLE, TITLE_NAME))
+    assert page.clicked and page.confirmed and len(page.catalog_calls) == 1
+    assert result == {'publishStatus': 204, 'catalogStatus': 200, 'titleId': TITLE, 'publishedTitleVerified': True}
+
+
+@pytest.mark.parametrize('status', [200, 401, 403, 409, 500])
+def test_publication_http_failure_does_not_become_a_ui_timeout(processing, disposable, status):
+    page = PublicationPage([Response({}, url=PUBLISH, status=status)])
+    with pytest.raises(AssertionError, match=f'Title publication failed: HTTP {status}'):
+        asyncio.run(processing.publish_original(page, page, TITLE, TITLE_NAME))
+    assert not page.confirmed and not page.catalog_calls
+
+
+def test_publication_cannot_pass_on_backend_response_when_console_confirmation_is_missing(processing, disposable):
+    page = PublicationPage([Response({}, url=PUBLISH, status=204)], ui_success=False)
+    with pytest.raises(AssertionError, match='moderator console did not confirm'):
+        asyncio.run(processing.publish_original(page, page, TITLE, TITLE_NAME))
+    assert not page.catalog_calls
+
+
+@pytest.mark.parametrize('options,reason', [
+    ({'catalog_status': 404}, 'unavailable in public catalog: HTTP 404'),
+    ({'catalog_patch': {'id': UPLOAD}}, 'belongs to another title'),
+    ({'catalog_patch': {'name': 'Another film'}}, 'belongs to another title'),
+])
+def test_publication_requires_matching_eligible_public_catalog_state(processing, disposable, options, reason):
+    page = PublicationPage([Response({}, url=PUBLISH, status=204)], **options)
+    with pytest.raises(AssertionError, match=reason):
+        asyncio.run(processing.publish_original(page, page, TITLE, TITLE_NAME))
+
+
+def test_unrelated_response_cannot_mark_publication_complete(processing, disposable):
+    page = PublicationPage([Response({}, url=PUBLISH.replace(TITLE, UPLOAD), status=204)])
+    with pytest.raises(AssertionError, match='No scoped title publication response'):
+        asyncio.run(processing.publish_original(page, page, TITLE, TITLE_NAME))
+
+
+@pytest.mark.parametrize('confirmed,project', [('false', 'reelnest-test-publication'), ('true', 'shared-stack')])
+def test_publication_refuses_unconfirmed_stack_before_ui_action(processing, monkeypatch, confirmed, project):
+    monkeypatch.setenv('REELNEST_DISPOSABLE_STACK', confirmed)
+    monkeypatch.setenv('COMPOSE_PROJECT_NAME', project)
+    page = PublicationPage([Response({}, url=PUBLISH, status=204)])
+    with pytest.raises(RuntimeError, match='BLOCKED'):
+        asyncio.run(processing.publish_original(page, page, TITLE, TITLE_NAME))
+    assert not page.clicked and not page.catalog_calls

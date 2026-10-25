@@ -437,6 +437,48 @@ def test_signed_log_urls_do_not_expose_signature_or_credentials():
     assert 'safe=1' in safe
 
 
+@pytest.mark.parametrize('prefix', [
+    '/auth/callback?',
+    'http://localhost:3000/auth/callback?',
+    'https://app.example.invalid/auth/callback/?',
+])
+@pytest.mark.parametrize('parameters', [
+    'state=synthetic-state&session_state=synthetic-session&code=synthetic-code&iss=http%3A%2F%2Flocalhost%3A8180%2Frealms%2Freelnest',
+    'iss=https%3A%2F%2Fidentity.example.invalid%2Frealms%2Freelnest&CODE=synthetic-code&State=synthetic-state&SESSION_STATE=synthetic-session',
+    '%63ode=synthetic-code&session%5Fstate=synthetic-session&state=synthetic-state&code=synthetic-duplicate&safe=1',
+])
+def test_oauth_callback_query_redacts_authentication_values_and_keeps_issuer(prefix, parameters):
+    diagnostic = 'web-1 | GET ' + prefix + parameters + ' 200 in 24ms'
+    safe = cloud.redact(diagnostic)
+    for secret in ('synthetic-code', 'synthetic-state', 'synthetic-session', 'synthetic-duplicate'):
+        assert secret not in safe
+    assert prefix in safe and '200 in 24ms' in safe
+    assert '[REDACTED]' in safe
+    if 'iss=' in parameters:
+        assert parameters.split('iss=', 1)[1].split('&', 1)[0] in safe
+    if 'safe=1' in parameters:
+        assert 'safe=1' in safe
+
+
+def test_oauth_callback_query_does_not_redact_unrelated_business_codes_or_issuer_path():
+    diagnostic = ('error_code=404 state=FAILED country_code=IN\n'
+                  'GET /api/status?code=404&state=retry&session_state=healthy\n'
+                  'issuer=https://identity.example.invalid/realms/reelnest')
+    assert cloud.redact(diagnostic) == diagnostic
+
+
+def test_oauth_callback_is_redacted_inside_json_and_workflow_annotations(monkeypatch, capsys):
+    import json
+    monkeypatch.setenv('GITHUB_ACTIONS', 'true')
+    diagnostic = json.dumps({'message': 'GET /auth/callback?code=synthetic-auth-code&state=synthetic-state&session_state=synthetic-session 200'})
+    safe = cloud.redact(diagnostic)
+    assert json.loads(safe)['message'].endswith(' 200')
+    cloud.emit_github_annotation(diagnostic, level='warning')
+    output = capsys.readouterr().out
+    assert output.startswith('::warning::') and len(output.splitlines()) == 1
+    assert 'synthetic-' not in output
+
+
 @pytest.mark.parametrize('parameters', [
     'sig=synthetic-sas-value%2Bencoded%3D&safe=1',
     'safe=1&sig=synthetic-sas-value%2Bencoded%3D',
