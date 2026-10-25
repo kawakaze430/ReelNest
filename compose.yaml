@@ -78,8 +78,6 @@ services:
     restart: "no"
     depends_on:
       minio: {condition: service_started}
-    volumes:
-      - ./infrastructure/minio/source-cors.xml:/minio-config/source-cors.xml:ro
     entrypoint:
       - /bin/sh
       - -ec
@@ -89,7 +87,8 @@ services:
         mc mb --ignore-existing local/reelnest-processed-private
         mc anonymous set none local/reelnest-source-private
         mc anonymous set none local/reelnest-processed-private
-        mc cors set local/reelnest-source-private /minio-config/source-cors.xml
+        # Community MinIO uses the server's MINIO_API_CORS_ALLOW_ORIGIN setting.
+        # Its S3 PutBucketCors operation is not implemented.
         echo 'Private developer media buckets ready; no anonymous grants added'
 
 

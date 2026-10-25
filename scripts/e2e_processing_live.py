@@ -12,6 +12,37 @@ import uuid
 from live_e2e_helpers import API, FIXTURE, ROOT, WEB, chromium_launch_options, login, require_disposable_stack
 
 
+async def verify_local_upload_cors(request):
+    """Check the developer storage server's actual browser preflight policy.
+
+    OPTIONS never uploads an object. The fixed loopback destination must not be
+    replaced with a fixture-controlled URL or production storage endpoint.
+    """
+    require_disposable_stack()
+    url = 'http://localhost:9000/reelnest-source-private/original-cors-probe.mp4'
+    origin = 'http://localhost:3000'
+    headers = {'Origin': origin, 'Access-Control-Request-Method': 'PUT',
+               'Access-Control-Request-Headers': 'content-type'}
+    allowed = await request.fetch(url, method='OPTIONS', headers=headers,
+                                  max_redirects=0, timeout=15000)
+    assert allowed.status in (200, 204), f'Local upload CORS preflight failed: HTTP {allowed.status}'
+    policy = {name.lower(): value for name, value in allowed.headers.items()}
+    assert policy.get('access-control-allow-origin') == origin, 'Local upload CORS must allow the exact development origin'
+    methods = {item.strip().upper() for item in policy.get('access-control-allow-methods', '').split(',')}
+    assert 'PUT' in methods, 'Local upload CORS does not permit PUT'
+    accepted_headers = {item.strip().lower() for item in policy.get('access-control-allow-headers', '').split(',')}
+    assert accepted_headers.intersection({'content-type', '*'}), 'Local upload CORS does not permit content-type'
+
+    foreign = 'https://foreign.example.invalid'
+    denied = await request.fetch(url, method='OPTIONS', headers={**headers, 'Origin': foreign},
+                                 max_redirects=0, timeout=15000)
+    foreign_policy = {name.lower(): value for name, value in denied.headers.items()}
+    granted = {item.strip() for item in foreign_policy.get('access-control-allow-origin', '').split(',')}
+    assert not granted.intersection({foreign, '*'}), 'Local upload CORS permits a foreign origin'
+    return {'allowedOriginStatus': allowed.status, 'foreignOriginStatus': denied.status,
+            'exactDevelopmentOrigin': True, 'putAndContentTypeAllowed': True, 'foreignOriginDenied': True}
+
+
 async def upload_original(creator, title_id, source):
     """Drive the shipped upload form and require its scoped backend completion.
 
@@ -53,6 +84,8 @@ async def main():
         browser = await playwright.chromium.launch(**chromium_launch_options())
         try:
             creator = await browser.new_page()
+            fixture['cors'] = await verify_local_upload_cors(creator.request)
+            FIXTURE.write_text(json.dumps(fixture, indent=2) + '\n')
             creator_identity = await login(creator, 'demo', 'DemoOnly123!', '/creator', 'Sign in to Creator Studio')
             headers = {'Authorization': 'Bearer ' + creator_identity['access_token']}
             await creator.goto(WEB + '/creator')

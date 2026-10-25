@@ -63,7 +63,7 @@ public class CreatorCaptionController {
         owned(jwt,titleId);language(language);editable(titleId);
         String srt=input.srt().replace("\r\n","\n").replace('\r','\n');
         if(srt.getBytes(java.nio.charset.StandardCharsets.UTF_8).length>200000 ||
-           srt.indexOf('\u0000')>=0 || srt.contains("<") || srt.contains(">") ||
+           srt.indexOf('\u0000')>=0 || srt.contains("<") || srt.replace("-->","").contains(">") ||
            !srt.contains("-->") || srt.lines().count()>15000)
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Invalid or oversized SRT captions");
         Integer count=jdbc.queryForObject("SELECT COUNT(*) FROM title_caption_sources WHERE title_id=?",Integer.class,titleId);

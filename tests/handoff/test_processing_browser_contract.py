@@ -133,3 +133,70 @@ def test_unrelated_response_cannot_mark_upload_complete(processing, tmp_path):
     source, body = original(tmp_path)
     with pytest.raises(AssertionError, match='No scoped upload completion'):
         asyncio.run(processing.upload_original(UploadPage([Response(body, method='GET')]), TITLE, source))
+
+
+class CorsRequests:
+    def __init__(self, *, allowed_status=200, allowed_patch=None, foreign_origin='', foreign_status=403):
+        self.calls = []
+        self.allowed_status = allowed_status
+        self.allowed_headers = {'Access-Control-Allow-Origin': 'http://localhost:3000',
+                                'Access-Control-Allow-Methods': 'GET, PUT, HEAD',
+                                'Access-Control-Allow-Headers': 'Content-Type'}
+        self.allowed_headers.update(allowed_patch or {})
+        self.foreign_status, self.foreign_origin = foreign_status, foreign_origin
+
+    async def fetch(self, url, **kwargs):
+        assert url == 'http://localhost:9000/reelnest-source-private/original-cors-probe.mp4'
+        assert kwargs['method'] == 'OPTIONS' and kwargs['max_redirects'] == 0
+        assert kwargs['timeout'] == 15000
+        assert set(kwargs['headers']) == {'Origin', 'Access-Control-Request-Method', 'Access-Control-Request-Headers'}
+        assert kwargs['headers']['Access-Control-Request-Method'] == 'PUT'
+        assert kwargs['headers']['Access-Control-Request-Headers'] == 'content-type'
+        self.calls.append((url, kwargs))
+        if kwargs['headers']['Origin'] == 'http://localhost:3000':
+            return SimpleNamespace(status=self.allowed_status, headers=self.allowed_headers)
+        assert kwargs['headers']['Origin'] == 'https://foreign.example.invalid'
+        return SimpleNamespace(status=self.foreign_status,
+                               headers={'Access-Control-Allow-Origin': self.foreign_origin})
+
+
+@pytest.fixture
+def disposable(monkeypatch):
+    monkeypatch.setenv('REELNEST_DISPOSABLE_STACK', 'true')
+    monkeypatch.setenv('COMPOSE_PROJECT_NAME', 'reelnest-test-cors-contract')
+
+
+@pytest.mark.parametrize('status,accepted_headers,foreign_status', [(200, 'Content-Type', 403), (204, '*', 200)])
+def test_local_cors_requires_real_preflight_headers_and_foreign_denial(processing, disposable, status, accepted_headers, foreign_status):
+    request = CorsRequests(allowed_status=status, allowed_patch={'Access-Control-Allow-Headers': accepted_headers},
+                           foreign_status=foreign_status)
+    result = asyncio.run(processing.verify_local_upload_cors(request))
+    assert result == {'allowedOriginStatus': status, 'foreignOriginStatus': foreign_status,
+                      'exactDevelopmentOrigin': True, 'putAndContentTypeAllowed': True, 'foreignOriginDenied': True}
+    assert len(request.calls) == 2
+
+
+@pytest.mark.parametrize('options,reason', [
+    ({'allowed_status': 400}, 'preflight failed: HTTP 400'),
+    ({'allowed_patch': {'Access-Control-Allow-Origin': '*'}}, 'exact development origin'),
+    ({'allowed_patch': {'Access-Control-Allow-Origin': 'https://foreign.example.invalid'}}, 'exact development origin'),
+    ({'allowed_patch': {'Access-Control-Allow-Methods': 'GET, HEAD'}}, 'does not permit PUT'),
+    ({'allowed_patch': {'Access-Control-Allow-Headers': 'authorization'}}, 'does not permit content-type'),
+    ({'allowed_patch': {'Access-Control-Allow-Headers': ''}}, 'does not permit content-type'),
+    ({'foreign_origin': '*'}, 'permits a foreign origin'),
+    ({'foreign_origin': 'https://foreign.example.invalid'}, 'permits a foreign origin'),
+])
+def test_local_cors_permissive_or_missing_policy_is_not_accepted(processing, disposable, options, reason):
+    request = CorsRequests(**options)
+    with pytest.raises(AssertionError, match=reason):
+        asyncio.run(processing.verify_local_upload_cors(request))
+
+
+@pytest.mark.parametrize('confirmed,project', [('false', 'reelnest-test-cors'), ('true', 'shared-stack')])
+def test_local_cors_refuses_unconfirmed_stack_before_any_request(processing, monkeypatch, confirmed, project):
+    monkeypatch.setenv('REELNEST_DISPOSABLE_STACK', confirmed)
+    monkeypatch.setenv('COMPOSE_PROJECT_NAME', project)
+    request = CorsRequests()
+    with pytest.raises(RuntimeError, match='BLOCKED'):
+        asyncio.run(processing.verify_local_upload_cors(request))
+    assert not request.calls

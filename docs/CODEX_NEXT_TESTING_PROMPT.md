@@ -53,6 +53,7 @@ The runner requires successful G0 evidence for the exact source, not a historica
 Verify all of the following with actual responses and browser behavior:
 
 - Every required image builds, each service starts, and Keycloak discovery, API, web and recommendation readiness succeed.
+- Community MinIO initialization uses the server-wide exact-origin CORS setting, not unsupported S3 `PutBucketCors`. Verify an actual allowed-origin PUT preflight, foreign-origin denial and readable multipart `ETag` in the shipped browser upload; keep source/processed buckets private. The pending caption fix must admit both LF and CRLF SRT timing arrows while still denying markup, nonowners and noneditable titles.
 - PostgreSQL has exactly V1–V27 in successful order. Verify clean migration and V9 → V27 upgrade/idempotency separately against disposable databases.
 - Real PKCE browser login works for two independent test accounts. Authenticated profiles work; anonymous requests, tampered JWTs and cross-account profile access are denied.
 - `e2e_account_security_live.py` proves profile/PIN ownership, persisted denial counters and correct-PIN reset/deletion against PostgreSQL, plus wrong-account/replay/deleted-profile denial and concurrent exactly-once Redis handoff. It must clean only its own test profiles. PIN protection here covers sensitive profile actions, not a universal playback challenge.

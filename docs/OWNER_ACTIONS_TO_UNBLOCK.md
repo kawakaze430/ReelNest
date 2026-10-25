@@ -8,6 +8,8 @@ The current environment can fetch private `main` and read GitHub API metadata th
 
 Restore the environment's repository write authentication through its GitHub/repository connection settings. Do not paste a token into chat or replace platform-held credentials. After the connection is restored, fetch `main`, reconcile any newer commits safely and push normally; then inspect the resulting CI annotations. An exact patch is retained under ignored `build-evidence/reelnest-main-verification.patch` for integration if this cloud checkout cannot push.
 
+The subsequent production-readiness request also produced local caption-upload and developer MinIO initializer repairs, with real Maven and FFmpeg regressions passing. The cumulative patch includes those changes and explicit live CORS acceptance. They remain unpublished under the same write-access blocker; no new branch or PR was created. Full integration and production release gates remain unaccepted.
+
 ## Current action: save the additional download destinations
 
 The first settings update succeeded: runtime revision 2 allows `cgr.dev` and `api.github.com`. GitHub API access works, and exact-commit Android, PostgreSQL and component job results have been verified. The registry index works too. Actual downloads redirect to additional storage hosts, which remain denied. The prepared follow-up draft retains the two working rules and package-manager presets and adds the observed download destinations. Agent tools can save this draft but cannot apply or publish it.
