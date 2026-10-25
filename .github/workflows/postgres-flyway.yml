@@ -43,7 +43,7 @@ jobs:
       JWT_ISSUER_URI: http://localhost:8180/realms/reelnest
       JWT_JWKS_URI: http://localhost:8180/realms/reelnest/protocol/openid-connect/certs
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
